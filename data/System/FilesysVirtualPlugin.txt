@@ -1,0 +1,127 @@
+%META:TOPICINFO{author="ProjectContributor" date="1356278771" format="1.1" version="1"}%
+---+!! !FilesysVirtualPlugin
+<!--
+One line description, required for extensions repository catalog.
+   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
+-->
+%SHORTDESCRIPTION%
+
+%TOC%
+
+This module provides two FUSE-like file system implementations that are tailored for use with the WebDAVContrib (from http://c-dot.co.uk) though they are general and flexible enough to serve in other applications. The advantage of  such a virtual file system is that it's easier to map other applications that assume a full filesystem to working on data from a Foswiki store.
+
+The file systems are implementations of the virtual base class
+=Filesys::Virtual= implementations:
+   * A file system layered over a Foswiki store.
+   * A pure-perl implementation of the same API for accessing files on disk.
+
+See CPAN:Filesys::Virtual::Plain for more information on the basic API
+this module implements.
+
+---++ =Filesys::Virtual::Foswiki=
+A full filesystem is a lot more generic than a Foswiki store, so
+there has to be some mapping between what is in the store and the filesystem,
+and some constraints on what can and can't be done with the filesystem.
+
+In the default configuration, the store is mapped as follows:
+   * Webs are directories
+   * Topics are seen as plain files that have a =.txt= extension,
+     e.g. =MyTopic.txt=. Other data views, such as =.html=, are also available.
+   * Attachments are stored in a =Topic_files/= directory, e.g.
+     =MyTopic_files/=
+
+Foswiki access controls are respected at all levels in the store.
+
+Note: You _cannot_ create subdirectories in a =_files= directories.
+
+The module currently uses =Foswiki::Func= methods with the absolute minimum
+of unavoidable kick-down to the file system when the Foswiki APIs just don't
+provide the required information. The unavoidable kick-down means that this
+module will only work with filesystem-based stores, such as =RcsWrap=,
+=RcsLite= and !PlainFileStoreContrib.
+The module also supports a simple lock API, which is driven by the requirements
+of !WebDAV. This lock implementation does _not_ relate in any way to Foswiki
+leases or atomic locks; it is purely for the support of !WebDAV clients that
+require locks.
+
+---++ =Filesys::Virtual::PlainPlusAttrs=
+=Filesys::Virtual::PlainPlusAttrs= extends =Filesys::Virtual::Plain= with extended attributes and locks. This is primarily used for testing !WebDAVContrib, by providing that module with a full filesystem interface. It is not directly useful to Foswiki but is provided as a reference implementation of the file system interface that the WebDAVContrib requires, and may be useful as a stand-alone
+solution to publish files on disk via !WebDAV. Note however that this filesystem
+does not support user logins.
+
+---++ Configuration
+---+++ Topic views
+Foswiki topics are stored internally in TML (Topic Markup Language). TML is
+the special wiki markup syntax you see if you "Raw View" a topic. Also mixed
+into topics is meta-data, such as form fields.
+
+Neither TML nor meta-data are supported by commonly available editing tools,
+such as word processors. So <nop>%TOPIC% supports different _views_ of the data
+in topics for read and write. Each view you enable adds another file type to
+the directory representing a web. For example, if you enable the =txt=, =html=, and =json= views you will see the following files for =MyTopic=:
+   * <nop>MyTopic.txt
+   * <nop>MyTopic.html
+   * <nop>MyTopic.json
+Any of these files can be written to change the content of <nop>MyTopic.
+
+The following standard views are available:
+| *View* | *Description* |
+| =txt= | Presents *just* the TML text of the topic in a .txt file. |
+| =html= | Topic text a =.html= file (mapping provided by the WysiwygPlugin). This allows you to edit topics using an HTML-capable editor. |
+| =json= | Meta-data in JSON format in a =.json= file |
+| =perl= | Meta-data as a serialised perl data structure in a =.perl= file |
+| =raw= | Presents the raw text of the topic in a =.raw= file. The raw topic text includes embedded meta-data macros. |
+
+You can choose which views you want using the Foswiki =configure= interface.
+Additional views can easily be added.
+
+---+++ =list_details=
+The =list_details= method of the =Filesys::Virtual::Plain= API is implemented
+slightly differently to provide better support for Foswiki. Rather than
+returning an =ls= - style list of files, it returns a full HTML web page.
+The web page is built using the
+Foswiki =templates= system, using the template file =webdav_folder=.
+The !FilesysVirtualPlugin does not provide an implementation of this
+template. However you can find an implementation in the companion
+=WebDAVLinkPlugin=. Foswiki skin settings are respected, so overriding
+this template for customisation is straightforward.
+
+---++ Installation Instructions
+
+%$INSTALL_INSTRUCTIONS%
+
+Note: This plugin doesn't actually have to be enabled in order to work.
+At the moment it uses standard Foswiki access control checking methods,
+but the plan is to add a permissions cache. For this reason it has to be
+a plugin so it can implement handlers that watch for topic saves. 
+
+Note that locks are stored in a database file, held in the working area
+for the plugin - usually =working/FilesysVirtualPlugin/lockdb=. You can
+delete this file at any time to automatically release all outstanding locks.
+
+Note that for reasons of efficiency the lock database is leaky (locks on deleted
+files may persist). For this reason it is recommended that the lock database
+is monitored and deleted during system maintenance if it grows too big.
+
+---++ License
+This software is released under the GNU Public License, version 2. However it
+cost a lot in blood, sweat and tears to develop, and if you find it useful
+then http://c-dot.co.uk would be grateful for your financial support.
+
+---++ Info
+Another great Foswiki extension from the <a style="text-decoration:none" href="http://wikiring.com"><img src="%ATTACHURLPATH%/wikiringlogo20x20.png" alt="" /> *WikiRing* </a> - working together to improve your wiki experience!
+
+Many thanks to the following sponsors for supporting this work:
+   * [[http://Kontextwork.de][Kontextwork]]
+
+|  Change History: | <!-- versions below in reverse order -->&nbsp; |
+|  Dependencies: | %$DEPENDENCIES% |
+
+<!-- Do _not_ attempt to edit this topic; it is auto-generated. Please add comments/questions/remarks to the feedback topic on twiki.org instead. -->
+
+%META:FORM{name="PackageForm"}%
+%META:FIELD{name="Author" value="Crawford Currie http://c-dot.co.uk"}%
+%META:FIELD{name="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk"}%
+%META:FIELD{name="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%
+%META:FIELD{name="Release" value="%$RELEASE%"}%
+%META:FIELD{name="Version" value="%$VERSION%"}%

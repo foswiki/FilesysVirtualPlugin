@@ -1,0 +1,17 @@
+# Release manifest for FilesysVirtualPlugin
+!noci
+data/System/FilesysVirtualPlugin.txt 0644 Documentation
+lib/Filesys/Virtual/Attachments.pm 0644 Perl module
+lib/Filesys/Virtual/Foswiki.pm 0644 Perl module
+lib/Filesys/Virtual/Foswiki.pm 0644 Perl module
+lib/Filesys/Virtual/Locks.pm 0644 Perl module
+lib/Filesys/Virtual/PlainPlusAttrs.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Config.spec 0644 Configuration data
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Permissions.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/html.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/json.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/perl.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/raw.pm 0644 Perl module
+lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/txt.pm 0644 Perl module
+pub/System/FilesysVirtualPlugin/wikiringlogo20x20.png 0644 Documentation
