@@ -144,7 +144,10 @@ HERE
 sub _make_attachments_fixture {
     my $this = shift;
     foreach my $fn ( 'A.gif', 'B C.jpg', $extreme_attachment ) {
-        my $f = Encode::encode( $Foswiki::cfg{Site}{CharSet}, $fn );
+        my $f =
+            $Foswiki::UNICODE
+          ? $fn
+          : Encode::encode( $Foswiki::cfg{Site}{CharSet}, $fn );
         Foswiki::Func::saveAttachment( $this->{test_web}, $this->{test_topic},
             $f, { file => "$tmpdir/testfile.gif" } );
         $this->assert(
@@ -512,7 +515,9 @@ sub verify_delete_T {
                 Foswiki::Func::attachmentExists(
                     $Foswiki::cfg{TrashWebName},
                     "$this->{test_topic}$n",
-                    Encode::encode( $Foswiki::cfg{Site}{CharSet}, $fn )
+                    $Foswiki::UNICODE
+                    ? $fn
+                    : Encode::encode( $Foswiki::cfg{Site}{CharSet}, $fn )
                 )
             );
         }

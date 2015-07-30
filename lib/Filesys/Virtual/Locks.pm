@@ -283,10 +283,10 @@ sub getLocks {
 sub getAuthToken {
     my ( $this, $token ) = @_;
     my $auth = $this->{db}->{auth}->{$token};
-    if ( $auth ) {
+    if ($auth) {
         my $now = scalar( time() );
         return $auth if ( $auth->{expires} gt $now );
-        $this->removeAuthToken( $token );
+        $this->removeAuthToken($token);
     }
 
     return undef;
@@ -302,10 +302,11 @@ sub setAuthToken {
     my $retval = 0;
     $this->_lock();
     eval {
-        if ( $data->{user} && $data->{path} && $data->{file} ) {
-            $data->{expires} = scalar( time() ) + 7200;
+        if ( $data->{user} && $data->{path} && $data->{file} )
+        {
+            $data->{expires}              = scalar( time() ) + 7200;
             $this->{db}->{auth}->{$token} = $data;
-            $retval = 1;
+            $retval                       = 1;
         }
     };
 
@@ -318,9 +319,7 @@ sub removeAuthToken {
     my ( $this, $token ) = @_;
 
     $this->_lock();
-    eval {
-        delete $this->{db}->{auth}->{$token};
-    };
+    eval { delete $this->{db}->{auth}->{$token}; };
     $this->_unlock();
 }
 

@@ -182,14 +182,15 @@ sub _initSession {
     my $newPathInfo;
     eval {
         require Foswiki::Request;
-        my $request = new Foswiki::Request;
-        my $pathInfo = $request->path_info();
+        my $request     = new Foswiki::Request;
+        my $pathInfo    = $request->path_info();
         my $davLocation = $Foswiki::cfg{Plugins}{WebDAVLinkPlugin}{Location};
-        if ( $pathInfo =~ /$davLocation\/(.+)\/(.+)_files/) {
+        if ( $pathInfo =~ /$davLocation\/(.+)\/(.+)_files/ ) {
             $newPathInfo = "/$1/$2";
         }
     };
-    if ( $@ ) {
+    if ($@) {
+
         # ignore...
     }
 
@@ -204,8 +205,8 @@ sub _initSession {
     # meyer@modell-aachen.de
     # Possible fix for wrong/missing web and topic name
     # Part 2
-    if ( $newPathInfo ) {
-        $this->{session}->{request}->pathInfo( $newPathInfo );
+    if ($newPathInfo) {
+        $this->{session}->{request}->pathInfo($newPathInfo);
     }
 
     # meyer@modell-aachen.de
@@ -213,25 +214,30 @@ sub _initSession {
     # See package VirtualHostingContrib for further details.
     eval {
         my $request = $this->{session}->{request};
-        my $host = $request->virtual_host();
-        my $port = $request->virtual_port();
+        my $host    = $request->virtual_host();
+        my $port    = $request->virtual_port();
 
         require Foswiki::Contrib::VirtualHostingContrib::VirtualHost;
-        my $vhost = Foswiki::Contrib::VirtualHostingContrib::VirtualHost->find( $host, $port );
+        my $vhost =
+          Foswiki::Contrib::VirtualHostingContrib::VirtualHost->find( $host,
+            $port );
 
-        my $vconfig = $vhost->run( sub {
-            return {
-                PubDir	   => $Foswiki::cfg{PubDir},
-                WorkingDir => $Foswiki::cfg{WorkingDir},
-                DataDir	   => $Foswiki::cfg{DataDir},
-            };
-                                   } );
+        my $vconfig = $vhost->run(
+            sub {
+                return {
+                    PubDir     => $Foswiki::cfg{PubDir},
+                    WorkingDir => $Foswiki::cfg{WorkingDir},
+                    DataDir    => $Foswiki::cfg{DataDir},
+                };
+            }
+        );
 
-        $Foswiki::cfg{PubDir} = $vconfig->{PubDir};
+        $Foswiki::cfg{PubDir}     = $vconfig->{PubDir};
         $Foswiki::cfg{WorkingDir} = $vconfig->{WorkingDir};
-        $Foswiki::cfg{DataDir} = $vconfig->{DataDir};
+        $Foswiki::cfg{DataDir}    = $vconfig->{DataDir};
     };
-    if ( $@ ) {
+    if ($@) {
+
         # nothing...
     }
 
@@ -240,6 +246,7 @@ sub _initSession {
 
 # Convert one or more strings from perl logical characters to the site encoding
 sub _logical2site {
+    return $@ if $Foswiki::UNICODE;
     return
       map { Encode::encode( $Foswiki::cfg{Site}{CharSet} || 'iso-8859-1', $_ ) }
       @_;
@@ -247,6 +254,7 @@ sub _logical2site {
 
 # Convert one or more strings from the site encoding to perl logical characters
 sub _site2logical {
+    return $@ if $Foswiki::UNICODE;
     return
       map { Encode::decode( $Foswiki::cfg{Site}{CharSet} || 'iso-8859-1', $_ ) }
       @_;
@@ -518,7 +526,8 @@ sub _hasAttachments {
     my ( $this, $web, $topic ) = @_;
 
     if ( defined &Foswiki::Func::getAttachmentList ) {
-        my $num = grep { !/$this->{excludeAttachments}/ }
+        my $num =
+          grep { !/$this->{excludeAttachments}/ }
           Foswiki::Func::getAttachmentList( $web, $topic );
         return $num > 0;
     }
@@ -565,12 +574,15 @@ sub _checkLock {
 sub _checkName {
     my ( $this, $info ) = @_;
 
-    # Foswiki uses internally coded names when checking
-    # validity of names, so we have to get back from the site charset
-    foreach my $key ( keys %{$info} ) {
-        $info->{$key} =
-          Encode::decode( $Foswiki::cfg{Site}{CharSet}, $info->{$key} )
-          if $info->{$key};
+    unless ($Foswiki::UNICODE) {
+
+        # Foswiki 1.x uses internally coded names when checking
+        # validity of names, so we have to get back from the site charset
+        foreach my $key ( keys %{$info} ) {
+            $info->{$key} =
+              Encode::decode( $Foswiki::cfg{Site}{CharSet}, $info->{$key} )
+              if $info->{$key};
+        }
     }
 
     if ( $info->{web} ) {
@@ -644,10 +656,7 @@ sub _getMode {
         }
     }
 
-    print STDERR "MODE /"
-      . ( $web   || '' ) . "/"
-      . ( $topic || '' )
-      . "=$mode\n"
+    print STDERR "MODE /" . ( $web || '' ) . "/" . ( $topic || '' ) . "=$mode\n"
       if ( $this->{trace} & 2 );
     return $mode;
 }
@@ -799,7 +808,7 @@ sub _A_delete {
     }
 
     my $destination =
-      "/"
+        "/"
       . $Foswiki::cfg{TrashWebName}
       . "/TrashAttachment$FILES_EXT/"
       . $info->{attachment}
@@ -823,7 +832,7 @@ sub _T_delete {
     }
 
     my $destination =
-      "/"
+        "/"
       . $Foswiki::cfg{TrashWebName} . '/'
       . $info->{topic}
       . $n
@@ -1271,7 +1280,8 @@ sub _D_list {
     # list attachments
     my @list = ();
     if ( defined &Foswiki::Func::getAttachmentList ) {
-        @list = grep { !/$this->{excludeAttachments}/ }
+        @list =
+          grep { !/$this->{excludeAttachments}/ }
           Foswiki::Func::getAttachmentList( $info->{web}, $info->{topic} );
 
         # Have to include '.' and '..' to make it look like a dir
@@ -1747,7 +1757,8 @@ sub _A_open_read {
         return $this->_fail( POSIX::EACCES, $info );
     }
 
-    my $data = Foswiki::Func::readAttachment( $info->{web}, $info->{topic},
+    my $data =
+      Foswiki::Func::readAttachment( $info->{web}, $info->{topic},
         $info->{attachment} );
 
     return IO::String->new($data);

@@ -15,9 +15,9 @@ sub read {
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
     eval {
-        # 1.2 and later
+        # 2 and later
         require Foswiki::Serialise;
-        $text = Foswiki::Serialise::serialise( $meta, 'Embedded');
+        $text = Foswiki::Serialise::serialise( $meta, 'Embedded' );
     };
     if ($@) {
         $text = $meta->getEmbeddedStoreForm();

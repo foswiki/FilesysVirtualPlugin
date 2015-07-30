@@ -1,4 +1,5 @@
-%META:TOPICINFO{author="ProjectContributor" date="1356278771" format="1.1" version="1"}%
+%META:TOPICINFO{author="ProjectContributor" date="1425309996" format="1.1" version="1"}%
+%META:TOPICPARENT{name="Plugins"}%
 ---+!! !FilesysVirtualPlugin
 <!--
 One line description, required for extensions repository catalog.
@@ -125,3 +126,4 @@ Many thanks to the following sponsors for supporting this work:
 %META:FIELD{name="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%
 %META:FIELD{name="Release" value="%$RELEASE%"}%
 %META:FIELD{name="Version" value="%$VERSION%"}%
+%META:FILEATTACHMENT{name="wikiringlogo20x20.png" attr="h" date="1425309996" user="ProjectContributor" version="1"}%
