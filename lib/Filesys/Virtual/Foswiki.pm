@@ -246,7 +246,7 @@ sub _initSession {
 
 # Convert one or more strings from perl logical characters to the site encoding
 sub _logical2site {
-    return $@ if $Foswiki::UNICODE;
+    return @_ if $Foswiki::UNICODE;
     return
       map { Encode::encode( $Foswiki::cfg{Site}{CharSet} || 'iso-8859-1', $_ ) }
       @_;
@@ -254,7 +254,7 @@ sub _logical2site {
 
 # Convert one or more strings from the site encoding to perl logical characters
 sub _site2logical {
-    return $@ if $Foswiki::UNICODE;
+    return @_ if $Foswiki::UNICODE;
     return
       map { Encode::decode( $Foswiki::cfg{Site}{CharSet} || 'iso-8859-1', $_ ) }
       @_;
@@ -656,8 +656,12 @@ sub _getMode {
         }
     }
 
-    print STDERR "MODE /" . ( $web || '' ) . "/" . ( $topic || '' ) . "=$mode\n"
+    print STDERR "MODE /"
+      . ( $web   || '' ) . "/"
+      . ( $topic || '' )
+      . "=$mode\n"
       if ( $this->{trace} & 2 );
+
     return $mode;
 }
 
