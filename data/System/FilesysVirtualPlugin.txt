@@ -1,11 +1,6 @@
 %META:TOPICINFO{author="ProjectContributor" date="1425309996" format="1.1" version="1"}%
-%META:TOPICPARENT{name="Plugins"}%
 ---+!! !FilesysVirtualPlugin
-<!--
-One line description, required for extensions repository catalog.
-   * Set SHORTDESCRIPTION = %$SHORTDESCRIPTION%
--->
-%SHORTDESCRIPTION%
+%FORMFIELD{"Description"}%
 
 %TOC%
 
@@ -115,15 +110,22 @@ Another great Foswiki extension from the <a style="text-decoration:none" href="h
 Many thanks to the following sponsors for supporting this work:
    * [[http://Kontextwork.de][Kontextwork]]
 
-|  Change History: | <!-- versions below in reverse order -->&nbsp; |
-|  Dependencies: | %$DEPENDENCIES% |
+---++ Dependencies
+%$DEPENDENCIES%
 
-<!-- Do _not_ attempt to edit this topic; it is auto-generated. Please add comments/questions/remarks to the feedback topic on twiki.org instead. -->
+---++ Change History
+%TABLE{columnwidths="7em" tablewidth="100%"}%
+|  08 Mar 2016: | fixed breakage when _not_ running under Foswiki:Extensions/VirtualHostingContrib (Foswiki:Main/MichaelDaum) |
 
-%META:FORM{name="PackageForm"}%
-%META:FIELD{name="Author" value="Crawford Currie http://c-dot.co.uk"}%
-%META:FIELD{name="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk"}%
-%META:FIELD{name="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%
-%META:FIELD{name="Release" value="%$RELEASE%"}%
-%META:FIELD{name="Version" value="%$VERSION%"}%
+
 %META:FILEATTACHMENT{name="wikiringlogo20x20.png" attr="h" date="1425309996" user="ProjectContributor" version="1"}%
+%META:FORM{name="PackageForm"}%
+%META:FIELD{name="Author" title="Author" value="Crawford Currie http://c-dot.co.uk"}%
+%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk"}%
+%META:FIELD{name="Description" title="Description" value="%25$SHORTDESCRIPTION%25"}%
+%META:FIELD{name="Home" title="Home" value="http://foswiki.org/Extensions/%TOPIC%"}%
+%META:FIELD{name="License" title="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%
+%META:FIELD{name="Release" title="Release" value="%$RELEASE%"}%
+%META:FIELD{name="Repository" title="Repository" value="https://github.com/foswiki/%TOPIC%"}%
+%META:FIELD{name="Support" title="Support" value="http://foswiki.org/Support/%TOPIC%"}%
+%META:FIELD{name="Version" title="Version" value="%$VERSION%"}%

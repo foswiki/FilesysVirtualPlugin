@@ -209,38 +209,6 @@ sub _initSession {
         $this->{session}->{request}->pathInfo($newPathInfo);
     }
 
-    # meyer@modell-aachen.de
-    # Add support for virtual hosting.
-    # See package VirtualHostingContrib for further details.
-    eval {
-        my $request = $this->{session}->{request};
-        my $host    = $request->virtual_host();
-        my $port    = $request->virtual_port();
-
-        require Foswiki::Contrib::VirtualHostingContrib::VirtualHost;
-        my $vhost =
-          Foswiki::Contrib::VirtualHostingContrib::VirtualHost->find( $host,
-            $port );
-
-        my $vconfig = $vhost->run(
-            sub {
-                return {
-                    PubDir     => $Foswiki::cfg{PubDir},
-                    WorkingDir => $Foswiki::cfg{WorkingDir},
-                    DataDir    => $Foswiki::cfg{DataDir},
-                };
-            }
-        );
-
-        $Foswiki::cfg{PubDir}     = $vconfig->{PubDir};
-        $Foswiki::cfg{WorkingDir} = $vconfig->{WorkingDir};
-        $Foswiki::cfg{DataDir}    = $vconfig->{DataDir};
-    };
-    if ($@) {
-
-        # nothing...
-    }
-
     return $this->{session};
 }
 

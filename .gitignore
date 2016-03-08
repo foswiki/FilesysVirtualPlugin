@@ -1,6 +1,7 @@
 *.swp
 *,v
 *.gz
+igp_*
 FilesysVirtualPlugin.md5
 FilesysVirtualPlugin.sha1
 FilesysVirtualPlugin.tgz
