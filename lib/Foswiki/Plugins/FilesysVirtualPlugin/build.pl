@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 package Foswiki::Plugins::FilesysVirtualPlugin::Build;
 
 BEGIN {

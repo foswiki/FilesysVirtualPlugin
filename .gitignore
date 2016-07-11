@@ -2,10 +2,10 @@
 *,v
 *.gz
 igp_*
-FilesysVirtualPlugin.md5
-FilesysVirtualPlugin.sha1
-FilesysVirtualPlugin.tgz
-FilesysVirtualPlugin.txt
-FilesysVirtualPlugin.zip
-FilesysVirtualPlugin_installer
-FilesysVirtualPlugin_installer.pl
+/FilesysVirtualPlugin.md5
+/FilesysVirtualPlugin.sha1
+/FilesysVirtualPlugin.tgz
+/FilesysVirtualPlugin.txt
+/FilesysVirtualPlugin.zip
+/FilesysVirtualPlugin_installer
+/FilesysVirtualPlugin_installer.pl

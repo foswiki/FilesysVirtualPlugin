@@ -28,11 +28,12 @@
 
 package Filesys::Virtual::Foswiki;
 
+use strict;
+use warnings;
+
 # Base class not strictly needed
 use Filesys::Virtual ();
 our @ISA = ('Filesys::Virtual');
-
-use strict;
 
 use File::Path ();
 use POSIX ':errno_h';
@@ -50,6 +51,7 @@ use Foswiki          ();    # for constructor
 use Foswiki::Plugins ();    # for $SESSION - namespace for compatibility
 use Foswiki::Func    ();    # for API
 use Foswiki::Meta    ();    # _ONLY_ to get the comment for an attachment :(
+use Foswiki::Request ();
 
 our $VERSION = '1.7.0';
 our $FILES_EXT;
@@ -152,8 +154,13 @@ sub new {
 sub DESTROY {
     my $this = shift;
 
-    # Clean up the Foswiki session
     $this->{session}->finish() if $this->{session};
+
+    undef $this->{session};
+    undef $this->{locks};
+    undef $this->{attrs_db};
+    undef $this->{adb_handle};
+    undef $this->{_filehandles};
 }
 
 sub _locks {
@@ -176,37 +183,24 @@ sub _initSession {
 
     return $this->{session} if defined $this->{session};
 
-    # meyer@modell-aachen.de
-    # Possible fix for wrong/missing web and topic name
-    # Part 1
-    my $newPathInfo;
-    eval {
-        require Foswiki::Request;
-        my $request     = new Foswiki::Request;
-        my $pathInfo    = $request->path_info();
-        my $davLocation = $Foswiki::cfg{Plugins}{WebDAVLinkPlugin}{Location};
-        if ( $pathInfo =~ /$davLocation\/(.+)\/(.+)_files/ ) {
-            $newPathInfo = "/$1/$2";
-        }
-    };
-    if ($@) {
+    # prepare request
+    my $request = Foswiki::Request->new();
+    my $pathInfo = $request->path_info() || $ENV{PATH_INFO} || '';
 
-        # ignore...
+    if ($pathInfo) {
+        my $davLocation =
+          $Foswiki::cfg{Plugins}{WebDAVLinkPlugin}{Location} || '/dav';
+        $pathInfo =~ s/^$davLocation(\/.+)(\/.+)(?:_files)?/$1$2/;
+
+        $request->pathInfo($pathInfo);
     }
 
     # Initialise the session, if required
-    $this->{session} = new Foswiki( undef, undef, { dav => 1 } );
+    $this->{session} = new Foswiki( undef, $request, { dav => 1 } );
     if ( !$this->{session} || !$Foswiki::Plugins::SESSION ) {
         print STDERR "Failed to initialise Filesys::Virtual session; "
           . " is the user authenticated?";
         return 0;
-    }
-
-    # meyer@modell-aachen.de
-    # Possible fix for wrong/missing web and topic name
-    # Part 2
-    if ($newPathInfo) {
-        $this->{session}->{request}->pathInfo($newPathInfo);
     }
 
     return $this->{session};
@@ -1326,6 +1320,9 @@ sub list_details {
     my @entries;
     foreach my $file ( sort $this->list($path) ) {
         next if $file eq '.';
+        next
+          if $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}
+          {HideEmptyAttachmentDirs} && $file =~ /^\.[^\.]/;
         my $url = $path;
         $url .= '/' unless $path =~ /\/$/;
         $url .= $file;
@@ -1350,8 +1347,30 @@ sub list_details {
     $body =~ s/%ENTRIES%/join('', @entries)/e;
     $body = Foswiki::Func::expandCommonVariables($body);
     $body = Foswiki::Func::renderText($body);
-    $body = $this->{session}->_renderZones($body);
+    $body = $this->_renderZones($body);
+
+    # clean up
+    $body =~ s/<\/?(?:nop|noautolink|sticky|literal)>//g;
+    $body =~ s/(<\/html>).*?$/$1/gs;
+    $body =~ s/<!--[^\[<].*?-->//g;
+    $body =~ s/<!--\s+-->//g;
+    $body =~ s/^\s*$//gms;
+
     return $body;
+}
+
+sub _renderZones {
+    my ( $this, $text ) = @_;
+
+    # SMELL: call to unofficial api
+    if ( $this->{session}->can("_renderZones") ) {    # old foswiki
+        $text = $this->{session}->_renderZones($text);
+    }
+    else {
+        $text = $this->{session}->zones()->_renderZones($text);
+    }
+
+    return $text;
 }
 
 =pod

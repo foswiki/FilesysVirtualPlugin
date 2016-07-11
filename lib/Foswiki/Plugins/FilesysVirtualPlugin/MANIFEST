@@ -1,5 +1,3 @@
-# Release manifest for FilesysVirtualPlugin
-!noci
 data/System/FilesysVirtualPlugin.txt 0644 Documentation
 lib/Filesys/Virtual/Attachments.pm 0644 Perl module
 lib/Filesys/Virtual/Foswiki.pm 0644 Perl module
