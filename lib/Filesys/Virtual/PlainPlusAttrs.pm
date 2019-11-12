@@ -7,12 +7,14 @@
 # WebDAV service.
 #
 package Filesys::Virtual::PlainPlusAttrs;
+
+use strict;
+use warnings;
+
 use Filesys::Virtual::Plain;
 push( @ISA, 'Filesys::Virtual::Plain' );
 
-use strict;
 use POSIX ':errno_h';
-
 use File::Path;
 use Data::Dumper;
 use Filesys::Virtual::Locks;
@@ -170,10 +172,11 @@ sub get_locks {
 sub _readAttrs {
     my ( $this, $path ) = @_;
     my $f = $this->_attrsFile($path);
-    if ( open( F, "<", $f ) ) {
+    my $F;
+    if ( open( $F, "<", $f ) ) {
         local $/;
-        eval(<F>);
-        close(F);
+        eval { <$F> };
+        close($F);
         return $VAR1;
     }
     return {};
@@ -183,9 +186,10 @@ sub _writeAttrs {
     my ( $this, $path, $attrs ) = @_;
     my $f = $this->_attrsFile($path);
     if ( scalar( keys %$attrs ) ) {
-        open( F, ">", $f ) || return $!;
-        print F Data::Dumper->Dump( [$attrs] );
-        return 0 if close(F);
+        my $F;
+        open( $F, ">", $f ) || return $!;
+        print $F Data::Dumper->Dump( [$attrs] );
+        return 0 if close($F);
     }
     elsif ( -e $f ) {
         return 0 if unlink($f);

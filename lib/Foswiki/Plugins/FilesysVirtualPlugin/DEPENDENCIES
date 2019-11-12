@@ -1,8 +1,3 @@
-# Dependencies for FilesysVirtualPlugin
-# Example:
-# Time::ParseDate,>=2003.0211,cpan,Required.
-# Foswiki::Plugins,>=1.15,perl,TWiki 4.1 release.
-
 Filesys::Virtual,>=0,cpan,Standard perl module
 Storable,>=0,cpan,Required, used for the locks database
 POSIX,>=0,cpan,Standard perl module

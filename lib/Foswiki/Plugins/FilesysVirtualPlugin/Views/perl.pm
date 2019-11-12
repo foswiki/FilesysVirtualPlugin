@@ -2,6 +2,8 @@
 package Foswiki::Plugins::FilesysVirtualPlugin::Views::perl;
 
 use strict;
+use warnings;
+
 use IO::String    ();
 use Data::Dumper  ();
 use Foswiki::Func ();
@@ -37,7 +39,7 @@ sub write {
 
     # SMELL: untaint?
     local $data;
-    eval($perl);
+    eval($perl);    ## no critic
     foreach my $k ( keys %$data ) {
         if ( $k !~ /^_/ ) {
             $meta->{$k} = $data->{$k};

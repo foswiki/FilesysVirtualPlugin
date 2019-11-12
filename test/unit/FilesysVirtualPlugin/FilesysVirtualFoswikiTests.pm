@@ -4,9 +4,12 @@
 # ASSUMES FILE-BASED STORE
 #
 package FilesysVirtualFoswikiTests;
-use base qw( FoswikiFnTestCase );
 
 use strict;
+use warnings;
+
+use base qw( FoswikiFnTestCase );
+
 use POSIX ':errno_h';
 
 use Foswiki;
@@ -51,9 +54,10 @@ sub set_up_for_verify {
     $this->assert($T);
     $this->assert($F);
 
-    open( FILE, ">$tmpdir/testfile.gif" );
-    print FILE "Blah";
-    close(FILE);
+    my $FILE;
+    open( $FILE, ">", "$tmpdir/testfile.gif" );
+    print $FILE "Blah";
+    close($FILE);
 
     # initial conditions:
     # /$this->{test_web}
@@ -328,26 +332,33 @@ sub verify_list_A {
 
 sub verify_stat_R {
     my $this = shift;
-    $this->_check_stat( '/', $Foswiki::cfg{DataDir}, 01777 );
+    $this->_check_stat( '/', $Foswiki::cfg{DataDir}, oct(1777) );
 }
 
 sub verify_stat_W {
     my $this = shift;
     $this->_check_stat( "/$this->{test_web}",
-        "$Foswiki::cfg{DataDir}/$this->{test_web}", 01777 );
+        "$Foswiki::cfg{DataDir}/$this->{test_web}",
+        oct(1777) );
     $this->_check_stat( "/Notaweb", "$Foswiki::cfg{DataDir}/Notaweb", 0 );
     $this->_check_stat( "/$this->{test_web}/NoView",
-        "$Foswiki::cfg{DataDir}/$this->{test_web}/NoView", 01111 );
+        "$Foswiki::cfg{DataDir}/$this->{test_web}/NoView",
+        oct(1111) );
     $this->_check_stat( "/$this->{test_web}/NoChange",
-        "$Foswiki::cfg{DataDir}/$this->{test_web}/NoChange", 01555 );
+        "$Foswiki::cfg{DataDir}/$this->{test_web}/NoChange",
+        oct(1555) );
 }
 
 sub verify_stat_D {
     my $this = shift;
-    $this->_check_stat( "/$this->{test_web}/$this->{test_topic}$F",
-        "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}", 01777 );
+    $this->_check_stat(
+        "/$this->{test_web}/$this->{test_topic}$F",
+        "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}",
+        oct(1777)
+    );
     $this->_check_stat( "/$this->{test_web}/NoView$F",
-        "$Foswiki::cfg{PubDir}/$this->{test_web}/NoView", 01111 );
+        "$Foswiki::cfg{PubDir}/$this->{test_web}/NoView",
+        oct(1111) );
 }
 
 sub verify_stat_T {
@@ -356,12 +367,15 @@ sub verify_stat_T {
         $this->_check_stat(
             "/$this->{test_web}/$this->{test_topic}.$v",
             "$Foswiki::cfg{DataDir}/$this->{test_web}/$this->{test_topic}.txt",
-            0666
+            oct(666)
         );
         $this->_check_stat( "/$this->{test_web}/NoView.$v",
-            "$Foswiki::cfg{DataDir}/$this->{test_web}/NoView.txt", 0000 );
-        $this->_check_stat( "/$this->{test_web}/NoChange.$v",
-            "$Foswiki::cfg{DataDir}/$this->{test_web}/NoChange.txt", 0444 );
+            "$Foswiki::cfg{DataDir}/$this->{test_web}/NoView.txt", oct(0) );
+        $this->_check_stat(
+            "/$this->{test_web}/NoChange.$v",
+            "$Foswiki::cfg{DataDir}/$this->{test_web}/NoChange.txt",
+            oct(444)
+        );
     }
 }
 

@@ -55,7 +55,8 @@ sub _parseResource {
     }
 
     # strip off hidden attribute from filename
-    @path = map { $_ =~ s/^\.//; $_ } @path if $this->{hideEmptyAttachmentDirs};
+    @path = map { my $tmp = $_; $tmp =~ s/^\.//; $tmp } @path
+      if $this->{hideEmptyAttachmentDirs};
 
     # rebuild normalized resource
     $resource = join( "/", @path );
@@ -76,7 +77,7 @@ sub _parseResource {
     );
 
     # anything else is an error
-    return undef if scalar(@path);
+    return if scalar(@path);
 
     # derive type from found resources and rebuild path
     @path = ();

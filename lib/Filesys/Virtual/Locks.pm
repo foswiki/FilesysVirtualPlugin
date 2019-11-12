@@ -46,7 +46,7 @@ sub new {
             if (TEST_STORE) {
                 local $/;
                 my $VAR1;
-                eval <$fd>;
+                eval { <$fd> };
                 $this->{db} = $VAR1;
             }
             else {
@@ -82,7 +82,7 @@ sub _lock {
         if (TEST_STORE) {
             local $/;
             my $VAR1;
-            eval <$h>;
+            eval { <$h> };
             $this->{db} = $VAR1;
         }
         else {
@@ -289,7 +289,7 @@ sub getAuthToken {
         $this->removeAuthToken($token);
     }
 
-    return undef;
+    return;
 }
 
 # Set an auth token with given data:

@@ -106,7 +106,9 @@ sub new {
             $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{Views} || 'txt' );
         foreach my $view (@v) {
             my $vc = 'Foswiki::Plugins::FilesysVirtualPlugin::Views::' . $view;
-            eval "require $vc" || die $@;
+            my $path = $vc . '.pm';
+            $path =~ s/::/\//g;
+            eval { require $path } || die $@;
             push( @views, $vc );
         }
 
@@ -120,7 +122,7 @@ sub new {
         {
             path          => '/',
             session       => undef,
-            validateLogin => 0,
+            validateLogin => 1,
             trace         => 0
         },
         $class
@@ -136,7 +138,7 @@ sub new {
 
     $this->{excludeAttachments} =
       $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{ExcludeAttachments}
-      || '^(_|igp_|genpdf_|gnuplot_)';
+      || '^(igp_|genpdf_|gnuplot_|graphviz_)';
     $this->{hideEmptyAttachmentDirs} =
       $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{HideEmptyAttachmentDirs}
       || 0;
@@ -190,7 +192,7 @@ sub _initSession {
     if ($pathInfo) {
         my $davLocation =
           $Foswiki::cfg{Plugins}{WebDAVLinkPlugin}{Location} || '/dav';
-        $pathInfo =~ s/^$davLocation(\/.+)(\/.+)(?:_files)?/$1$2/;
+        $pathInfo =~ s/^(?:$davLocation)?(\/.+)(\/.+)(?:_files)?\/.+?$/$1$2/;
 
         $request->pathInfo($pathInfo);
     }
@@ -307,7 +309,7 @@ sub login {
 
             # Does not validate the pattern nor the subst, so get them wrong
             # at your own risk!
-            eval "\$loginName =~ s#$pattern#$subst#g";
+            eval { $loginName =~ s#$pattern#$subst#g };
         }
     }
 
@@ -402,7 +404,7 @@ sub _parseResource {
     );
 
     # anything else is an error
-    return undef if scalar(@path);
+    return if scalar(@path);
 
     # derive type from found resources and rebuild path
     @path = ();
@@ -434,7 +436,7 @@ sub _parseResource {
                         }
                     }
 
-                    return undef unless $info{view};
+                    return unless $info{view};
                 }
 
                 push @path, $info{topic};
@@ -479,6 +481,15 @@ sub _dispatch {
     print STDERR "Call $function for $info->{resource},  type $info->{type} ",
       join( ',', map { defined $_ ? $_ : 'undef' } @_ ), "\n"
       if ( $this->{trace} & 2 );
+
+    $this->{session}->logger(
+        {
+            level    => 'info',
+            action   => 'webdav',
+            webTopic => $resource,
+            extra    => " ($function)"
+        }
+    );
 
     return $this->$function( $info, @_ );
 }
@@ -600,21 +611,21 @@ sub _getMode {
         if ( !$web || Foswiki::Func::webExists($web) ) {
 
             # No access unless web exists or root
-            $mode |= 01111;    # d--x--x--x
+            $mode |= oct(1111);    # d--x--x--x
             if ( $this->_haveAccess( 'VIEW', $web ) ) {
-                $mode |= 0444;    # -r--r--r--
-                                  # No change without view
+                $mode |= oct(444);    # -r--r--r--
+                                      # No change without view
                 if ( $this->_haveAccess( 'CHANGE', $web ) ) {
-                    $mode |= 0222;    # --w--w--w-
+                    $mode |= oct(222);    # --w--w--w-
                 }
             }
         }
     }
     elsif ( $this->_haveAccess( 'VIEW', $web, $topic ) ) {
-        $mode |= 0444;                # -r--r--r--
-                                      # No change without view
+        $mode |= oct(444);                # -r--r--r--
+                                          # No change without view
         if ( $this->_haveAccess( 'CHANGE', $web, $topic ) ) {
-            $mode |= 0222;            # --w--w--w-
+            $mode |= oct(222);            # --w--w--w-
         }
     }
 
@@ -696,7 +707,7 @@ sub _fail {
         print STDERR "$op $path failed; $mess\n";
     }
     $! = $code;
-    return undef;
+    return;
 }
 
 # Not supported for Foswiki
@@ -979,7 +990,7 @@ sub _W_chdir {
         return $this->{path};
     }
 
-    return undef;
+    return;
 }
 
 sub _T_chdir {
@@ -994,11 +1005,11 @@ sub _D_chdir {
         $this->{path} = $info->{path};
         return $this->{path};
     }
-    return undef;
+    return;
 }
 
 sub _A_chdir {
-    return undef;
+    return;
 }
 
 =pod
@@ -1418,7 +1429,7 @@ sub _D_stat {
     return () unless -e "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";
 
     my @stat = CORE::stat("$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}");
-    $stat[2] = $this->_getMode( $info->{web}, $info->{topic} ) | 01111;
+    $stat[2] = $this->_getMode( $info->{web}, $info->{topic} ) | oct(1111);
 
     return @stat;
 }
@@ -1527,7 +1538,7 @@ sub _R_test {
     else {
 
         # SMELL: violating Store encapsulation
-        return eval "-$type '$Foswiki::cfg{DataDir}'";
+        return eval { "-$type '$Foswiki::cfg{DataDir}'" };
     }
 }
 
@@ -1577,7 +1588,7 @@ sub _A_test {
     my $file =
       "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}/$info->{attachment}";
 
-    return eval "-$type $file";
+    return eval { "-$type $file" };
 }
 
 sub _D_test {
@@ -1623,7 +1634,7 @@ sub _D_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return eval "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";
+    return eval { "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}" };
 }
 
 sub _T_test {
@@ -1663,7 +1674,8 @@ sub _T_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";
+    return
+      eval { "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt" };
 }
 
 sub _W_test {
@@ -1699,7 +1711,7 @@ sub _W_test {
     # lpSbctugkTBzsMAC
     my $file = "$Foswiki::cfg{DataDir}/$info->{web}";
 
-    return eval "-$type $file";
+    return eval { "-$type $file" };
 }
 
 =pod
@@ -2146,6 +2158,7 @@ Other fields will be preserved in the lock.
 
 sub add_lock {
     my ( $this, %lockstat ) = @_;
+
     return unless $this->_initSession();
     $lockstat{taken} ||= time();
 
