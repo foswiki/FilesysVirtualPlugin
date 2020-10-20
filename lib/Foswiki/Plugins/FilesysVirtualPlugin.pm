@@ -3,8 +3,8 @@ package Foswiki::Plugins::FilesysVirtualPlugin;
 
 use strict;
 
-our $VERSION = '2.10';
-our $RELEASE = '12 Nov 2019';
+our $VERSION = '2.20';
+our $RELEASE = '20 Oct 2020';
 our $SHORTDESCRIPTION =
   'Implementation of the Filesys::Virtual::Plain API over a Foswiki store';
 our $NO_PREFS_IN_TOPIC = 1;
@@ -77,6 +77,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011 WikiRing http://wikiring.com
 Copyright (C) 2008-2012 Crawford Currie http://c-dot.co.uk
+Copyright (C) 2011-202020 Foswiki Contributors
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

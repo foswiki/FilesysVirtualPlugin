@@ -105,7 +105,6 @@ cost a lot in blood, sweat and tears to develop, and if you find it useful
 then http://c-dot.co.uk would be grateful for your financial support.
 
 ---++ Info
-Another great Foswiki extension from the <a style="text-decoration:none" href="http://wikiring.com"><img src="%ATTACHURLPATH%/wikiringlogo20x20.png" alt="" /> *WikiRing* </a> - working together to improve your wiki experience!
 
 Many thanks to the following sponsors for supporting this work:
    * [[http://Kontextwork.de][Kontextwork]]
@@ -115,15 +114,15 @@ Many thanks to the following sponsors for supporting this work:
 
 ---++ Change History
 %TABLE{columnwidths="7em" tablewidth="100%"}%
+|  20 Oct 2020: | make it work on subwebs (Foswiki:Main/MichaelDaum) |
 |  12 Nov 2019: | enable password validation by default; fix several issues flagged by perlcrit (Foswiki:Main/MichaelDaum) |
 |  11 Jul 2016: | compatibility with Foswiki-2 (Foswiki:Main/MichaelDaum) |
 |  08 Mar 2016: | fixed breakage when _not_ running under Foswiki:Extensions/VirtualHostingContrib (Foswiki:Main/MichaelDaum) |
 
 
-%META:FILEATTACHMENT{name="wikiringlogo20x20.png" attr="h" date="1573556025" user="ProjectContributor" version="1"}%
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Crawford Currie http://c-dot.co.uk"}%
-%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk"}%
+%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk; 2011-2020 Foswiki Contributors"}%
 %META:FIELD{name="Description" title="Description" value="%25$SHORTDESCRIPTION%25"}%
 %META:FIELD{name="Home" title="Home" value="https://foswiki.org/Extensions/%TOPIC%"}%
 %META:FIELD{name="License" title="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%

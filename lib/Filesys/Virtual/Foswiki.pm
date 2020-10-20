@@ -1810,10 +1810,13 @@ sub _makeWriteHandle {
     my $this = shift;
     my %opts = @_;
 
-    my $name =
-      Foswiki::Func::getWorkArea('FilesysVirtualPlugin')
-      . join( '_', @{ $opts{path} } );
-    my $fh = new IO::File( $name, 'w' );
+    my $path = join( '_', @{ $opts{path} } );
+    $path =~ s/\//_/g;
+
+    my $name = Foswiki::Func::getWorkArea('FilesysVirtualPlugin') . '/' . $path;
+
+    my $fh = new IO::File( $name, 'w' )
+      or die "Failed to create temporary file $name";
     $this->{_filehandles}->{$fh} = \%opts;
     return $fh;
 }
@@ -1930,11 +1933,13 @@ sub close_write {
     my $result;
 
     if ($rec) {
-        my $path = $rec->{path};
+        my $path = join( '_', @{ $rec->{path} } );
+        $path =~ s/\//_/g;
+
         my $tmpfile =
-          Foswiki::Func::getWorkArea('FilesysVirtualPlugin')
-          . join( '_', @$path );
+          Foswiki::Func::getWorkArea('FilesysVirtualPlugin') . '/' . $path;
         my $tfh;
+
         open( $tfh, '<', $tmpfile )
           or die "Failed to open temporary file $tmpfile";
 
@@ -2245,6 +2250,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011-2014 WikiRing http://wikiring.com
 Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
+Copyright (C) 2014-2020 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will
