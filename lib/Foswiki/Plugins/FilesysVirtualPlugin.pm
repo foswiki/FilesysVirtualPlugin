@@ -2,14 +2,13 @@
 package Foswiki::Plugins::FilesysVirtualPlugin;
 
 use strict;
+use warnings;
 
-our $VERSION = '2.20';
-our $RELEASE = '20 Oct 2020';
+our $VERSION = '3.00';
+our $RELEASE = '15 Jan 2022';
 our $SHORTDESCRIPTION =
   'Implementation of the Filesys::Virtual::Plain API over a Foswiki store';
 our $NO_PREFS_IN_TOPIC = 1;
-
-my $pluginName = 'FilesysVirtualPlugin';
 
 sub initPlugin {
     return 1;
@@ -20,6 +19,8 @@ sub initPlugin {
 The following implementation is required if we decide to use cached permissions
 
 use Foswiki::Plugins::FilesysVirtualPlugin::Permissions ();
+
+my $pluginName = 'FilesysVirtualPlugin';
 
 sub initPlugin {
     my ( $topic, $web, $user, $installWeb ) = @_;
@@ -77,7 +78,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011 WikiRing http://wikiring.com
 Copyright (C) 2008-2012 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2011-202020 Foswiki Contributors
+Copyright (C) 2011-2022 Foswiki Contributors
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

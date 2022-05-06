@@ -8,6 +8,7 @@ lib/Foswiki/Plugins/FilesysVirtualPlugin/Config.spec 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/DEPENDENCIES 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Permissions.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin.pm 0644
+lib/Foswiki/Plugins/FilesysVirtualPlugin/View.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/html.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/json.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Views/perl.pm 0644

@@ -41,12 +41,18 @@ leases or atomic locks; it is purely for the support of !WebDAV clients that
 require locks.
 
 ---++ =Filesys::Virtual::PlainPlusAttrs=
-=Filesys::Virtual::PlainPlusAttrs= extends =Filesys::Virtual::Plain= with extended attributes and locks. This is primarily used for testing !WebDAVContrib, by providing that module with a full filesystem interface. It is not directly useful to Foswiki but is provided as a reference implementation of the file system interface that the WebDAVContrib requires, and may be useful as a stand-alone
-solution to publish files on disk via !WebDAV. Note however that this filesystem
-does not support user logins.
+
+=Filesys::Virtual::PlainPlusAttrs= extends =Filesys::Virtual::Plain= with
+extended attributes and locks. This is primarily used for testing
+!WebDAVContrib, by providing that module with a full filesystem interface. It
+is not directly useful to Foswiki but is provided as a reference implementation
+of the file system interface that the WebDAVContrib requires, and may be useful
+as a stand-alone solution to publish files on disk via !WebDAV. Note however
+that this filesystem does not support user logins.
 
 ---++ Configuration
 ---+++ Topic views
+
 Foswiki topics are stored internally in TML (Topic Markup Language). TML is
 the special wiki markup syntax you see if you "Raw View" a topic. Also mixed
 into topics is meta-data, such as form fields.
@@ -55,23 +61,27 @@ Neither TML nor meta-data are supported by commonly available editing tools,
 such as word processors. So <nop>%TOPIC% supports different _views_ of the data
 in topics for read and write. Each view you enable adds another file type to
 the directory representing a web. For example, if you enable the =txt=, =html=, and =json= views you will see the following files for =MyTopic=:
+
    * <nop>MyTopic.txt
    * <nop>MyTopic.html
    * <nop>MyTopic.json
+
 Any of these files can be written to change the content of <nop>MyTopic.
 
 The following standard views are available:
+
 | *View* | *Description* |
 | =txt= | Presents *just* the TML text of the topic in a .txt file. |
 | =html= | Topic text a =.html= file (mapping provided by the WysiwygPlugin). This allows you to edit topics using an HTML-capable editor. |
 | =json= | Meta-data in JSON format in a =.json= file |
-| =perl= | Meta-data as a serialised perl data structure in a =.perl= file |
-| =raw= | Presents the raw text of the topic in a =.raw= file. The raw topic text includes embedded meta-data macros. |
+| =perl= | Meta-data as a serialised perl data structure in a =.pl= file |
+| =raw= | Presents the raw text of the topic in a =.raw.txt= file. The raw topic text includes embedded meta-data macros. |
 
 You can choose which views you want using the Foswiki =configure= interface.
 Additional views can easily be added.
 
 ---+++ =list_details=
+
 The =list_details= method of the =Filesys::Virtual::Plain= API is implemented
 slightly differently to provide better support for Foswiki. Rather than
 returning an =ls= - style list of files, it returns a full HTML web page.
@@ -114,6 +124,7 @@ Many thanks to the following sponsors for supporting this work:
 
 ---++ Change History
 %TABLE{columnwidths="7em" tablewidth="100%"}%
+|  06 May 2022: | fixed unicode handling of views; extension for raw is =.raw.txt=; extension for perl is now =.pl= (Foswiki:Main/MichaelDaum) |
 |  20 Oct 2020: | make it work on subwebs (Foswiki:Main/MichaelDaum) |
 |  12 Nov 2019: | enable password validation by default; fix several issues flagged by perlcrit (Foswiki:Main/MichaelDaum) |
 |  11 Jul 2016: | compatibility with Foswiki-2 (Foswiki:Main/MichaelDaum) |
@@ -122,7 +133,7 @@ Many thanks to the following sponsors for supporting this work:
 
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Crawford Currie http://c-dot.co.uk"}%
-%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk; 2011-2020 Foswiki Contributors"}%
+%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk; 2011-2022 Foswiki Contributors"}%
 %META:FIELD{name="Description" title="Description" value="%25$SHORTDESCRIPTION%25"}%
 %META:FIELD{name="Home" title="Home" value="https://foswiki.org/Extensions/%TOPIC%"}%
 %META:FIELD{name="License" title="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%

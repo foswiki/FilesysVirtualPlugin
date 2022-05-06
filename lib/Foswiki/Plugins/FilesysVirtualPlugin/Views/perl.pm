@@ -4,15 +4,24 @@ package Foswiki::Plugins::FilesysVirtualPlugin::Views::perl;
 use strict;
 use warnings;
 
-use IO::String    ();
-use Data::Dumper  ();
-use Foswiki::Func ();
+use Foswiki::Func                                ();
+use Foswiki::Plugins::FilesysVirtualPlugin::View ();
+use IO::String                                   ();
+use Data::Dumper;
 
-our $VERSION = '1.6.1';
-our $RELEASE = '%$TRACKINGCODE%';
-our $data;
+$Data::Dumper::Useperl = 1;
+$Data::Dumper::Terse   = 1;
 
-sub extension { '.perl' }
+our @ISA = qw( Foswiki::Plugins::FilesysVirtualPlugin::View );
+
+sub new {
+    my $class = shift;
+
+    my $this = $class->SUPER::new(@_);
+    $this->extension(".pl");
+
+    return $this;
+}
 
 sub read {
     my ( $this, $web, $topic ) = @_;
@@ -29,7 +38,9 @@ sub read {
     unless ( defined $wdata{_text} ) {
         $wdata{_text} = $text;
     }
-    return IO::String->new( Data::Dumper->Dump( [ \%wdata ], ['data'] ) );
+
+    $text = Dumper( \%wdata );
+    return IO::String->new( Encode::encode_utf8($text) );
 }
 
 sub write {
@@ -37,9 +48,10 @@ sub write {
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
 
-    # SMELL: untaint?
-    local $data;
-    eval($perl);    ## no critic
+    $perl = Encode::decode_utf8($perl);
+
+    my $data = eval $perl;    ## no critic
+
     foreach my $k ( keys %$data ) {
         if ( $k !~ /^_/ ) {
             $meta->{$k} = $data->{$k};
@@ -47,8 +59,7 @@ sub write {
     }
     $text = $data->{_text} if defined $data->{_text};
 
-    eval { Foswiki::Func::saveTopic( $web, $topic, $meta, $text ); };
-    return $@;
+    return $this->saveTopic( $web, $topic, $meta, $text );
 }
 
 1;
@@ -56,7 +67,7 @@ sub write {
 __END__
 
 Copyright (C) 2010-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2020 Foswiki Contributors 
+Copyright (C) 2012-2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

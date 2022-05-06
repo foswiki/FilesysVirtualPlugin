@@ -2,14 +2,37 @@
 package Foswiki::Plugins::FilesysVirtualPlugin::Views::json;
 
 use strict;
-use IO::String    ();
-use JSON          ();
-use Foswiki::Func ();
+use warnings;
 
-our $VERSION = '1.6.1';
-our $RELEASE = '%$TRACKINGCODE%';
+use IO::String                                   ();
+use JSON                                         ();
+use Foswiki::Func                                ();
+use Foswiki::Plugins::FilesysVirtualPlugin::View ();
 
-sub extension { '.json' }
+our @ISA = qw( Foswiki::Plugins::FilesysVirtualPlugin::View );
+
+sub new {
+    my $class = shift;
+
+    my $this = $class->SUPER::new(@_);
+    $this->extension(".json");
+
+    return $this;
+}
+
+sub DESTROY {
+    my $this;
+
+    undef $this->{_json};
+}
+
+sub json {
+    my $this = shift;
+
+    $this->{_json} = JSON->new->utf8->pretty() unless $this->{_json};
+
+    return $this->{_json};
+}
 
 sub read {
     my ( $this, $web, $topic ) = @_;
@@ -26,7 +49,8 @@ sub read {
     unless ( defined $data{_text} ) {
         $data{_text} = $text;
     }
-    return IO::String->new( JSON::to_json( \%data ) );
+
+    return IO::String->new( $this->json->encode( \%data ) );
 }
 
 sub write {
@@ -34,16 +58,15 @@ sub write {
 
     my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
 
-    # SMELL: untaint?
-    my $data = JSON::from_json($json);
+    my $data = $this->json->decode($json);
     foreach my $k ( keys %$data ) {
         if ( $k !~ /^_/ || $k eq '_text' ) {
             $meta->{$k} = $data->{$k};
         }
     }
     $text = $data->{_text} if defined $data->{_text};
-    eval { Foswiki::Func::saveTopic( $web, $topic, $meta, $text ); };
-    return $@;
+
+    return $this->saveTopic( $web, $topic, $meta, $text );
 }
 
 1;
@@ -51,6 +74,7 @@ sub write {
 __END__
 
 Copyright (C) 2010-2012 Crawford Currie http://c-dot.co.uk
+Copyright (C) 2012-2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

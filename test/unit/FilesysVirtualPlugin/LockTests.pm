@@ -1,10 +1,11 @@
 package LockTests;
 
-use base qw(Unit::TestCase);
-
 use strict;
+use warnings;
 
+use base qw(Unit::TestCase);
 use Filesys::Virtual::Locks;
+use Data::Dump qw(dump);
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -128,12 +129,12 @@ sub test_addRemove {
 
     # Check that a recursive call gets all the locks
     $locks = new Filesys::Virtual::Locks( $this->{db} );
-    @l = $locks->getLocks( 'a', -1 );
+    @l = sort { $a->{path} cmp $b->{path} } $locks->getLocks( 'a', -1 );
     $this->assert_equals( 4, scalar(@l) );
     $this->assert_str_equals( "1", $l[0]->{token} );
     $this->assert_str_equals( "2", $l[1]->{token} );
-    $this->assert_str_equals( "3", $l[3]->{token} );
-    $this->assert_str_equals( "4", $l[2]->{token} );
+    $this->assert_str_equals( "3", $l[2]->{token} );
+    $this->assert_str_equals( "4", $l[3]->{token} );
 }
 
 1;

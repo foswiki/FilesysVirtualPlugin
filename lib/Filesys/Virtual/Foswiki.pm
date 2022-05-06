@@ -43,8 +43,6 @@ use IO::String              ();
 use IO::File                ();
 use Storable                ();
 
-#use Data::Dump qw(dump);
-
 # This uses the first occurence of these modules on the path, so the path
 # has to have been set up before we get here
 use Foswiki          ();    # for constructor
@@ -54,9 +52,7 @@ use Foswiki::Meta    ();    # _ONLY_ to get the comment for an attachment :(
 use Foswiki::Request ();
 
 our $VERSION = '1.7.0';
-our $FILES_EXT;
-our @views;
-our $extensionsRE;
+our @VIEWS;
 
 =pod
 
@@ -95,29 +91,6 @@ sub new {
     my $class = shift;
     my $args  = shift;
 
-    # Set up files extension n first call
-    $FILES_EXT ||=
-      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{AttachmentsDirExtension}
-      || '_files';
-
-    unless ( scalar(@views) ) {
-        my @v =
-          split( /\s*,\s*/,
-            $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{Views} || 'txt' );
-        foreach my $view (@v) {
-            my $vc = 'Foswiki::Plugins::FilesysVirtualPlugin::Views::' . $view;
-            my $path = $vc . '.pm';
-            $path =~ s/::/\//g;
-            eval { require $path } || die $@;
-            push( @views, $vc );
-        }
-
-        $extensionsRE =
-          join( '|', ( $FILES_EXT, map { $_->extension() } @views ) );
-    }
-
-    # cwd is the full path to the resource (ignore)
-
     my $this = bless(
         {
             path          => '/',
@@ -127,6 +100,48 @@ sub new {
         },
         $class
     );
+
+    # Set up files extension n first call
+    $this->{attachmentsDirExtension} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{AttachmentsDirExtension}
+      // '_files';
+
+    unless ( scalar(@VIEWS) ) {
+        my @v =
+          split( /\s*,\s*/,
+            $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{Views} // '' );
+        foreach my $view (@v) {
+            my $vc = 'Foswiki::Plugins::FilesysVirtualPlugin::Views::' . $view;
+            my $path = $vc . '.pm';
+            $path =~ s/::/\//g;
+            eval { require $path } || die $@;
+            push @VIEWS, $vc->new();
+        }
+    }
+
+    $this->{views} = \@VIEWS;
+    $this->{extensionsRE} = join( '|', map { $_->extension() } @VIEWS );
+
+    # cwd is the full path to the resource (ignore)
+
+    $this->{excludeAttachments} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{ExcludeAttachments}
+      || '^(igp_|genpdf_|gnuplot_|graphviz_)';
+    $this->{hideEmptyAttachmentDirs} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{HideEmptyAttachmentDirs}
+      || 0;
+
+    $this->{resourceLinkFileName} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{ResourceLinkFileName}
+      // '00.open_location.html';
+
+    $this->{allowRenameTopic} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{AllowRenameTopic} // 0;
+    $this->{allowRenameWeb} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{AllowRenameWeb} // 0;
+    $this->{allowRenameAttachment} =
+      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{AllowRenameAttachment} // 1;
+
     foreach my $field ( keys %$args ) {
         if ( $this->can($field) ) {
             $this->$field( $args->{$field} );
@@ -136,12 +151,7 @@ sub new {
         }
     }
 
-    $this->{excludeAttachments} =
-      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{ExcludeAttachments}
-      || '^(igp_|genpdf_|gnuplot_|graphviz_)';
-    $this->{hideEmptyAttachmentDirs} =
-      $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{HideEmptyAttachmentDirs}
-      || 0;
+    #$this->{trace} = 3;
 
     if ( $this->{trace} & 2 ) {
         print STDERR "FILESYS: init "
@@ -163,6 +173,7 @@ sub DESTROY {
     undef $this->{attrs_db};
     undef $this->{adb_handle};
     undef $this->{_filehandles};
+    undef $this->{_infoOfResource};
 }
 
 sub _locks {
@@ -291,7 +302,7 @@ sub login {
 
     # SMELL: violations of core encapsulation
     my $users = $this->{session}->{users};
-    if ( $this->{validateLogin} ) {
+    if ( $this->{validateLogin} && $loginPass ) {
         my $validation = $users->checkPassword( $loginName, $loginPass );
         if ( !$validation ) {
             return 0;
@@ -337,9 +348,10 @@ sub login {
 #    type => the type of the resource:
 #       R: - root
 #       W: - web
-#       T: - topic
+#       T: - topic view
 #       D: - attachments dir
 #       A: - attachment
+#       F: - file
 #
 #    web => the full web path name
 #    topic => the topic name with no suffix
@@ -347,12 +359,49 @@ sub login {
 #    path => the full path to the web, topic or attachment
 #    resource => the normalized resource
 #    view => the view onto a topic (only set for topic resources)
+#    file => the name of the file to return
 # }
 #
 # if the array is empty, that indicates the root (/)
 # The rules for encoding web, topic and attachment names are automatically
 # applied.
 sub _parseResource {
+    my ( $this, $resource ) = @_;
+
+    #print STDERR "called _parseResource($resource)\n";
+
+    my @path = $this->_getPathOfResource($resource);
+    my $path = join( "/", @path );
+
+    my $info = $this->{_infoOfResource}{$path};
+    return $info if defined $info;
+
+    $info = {
+        type     => 'R',
+        resource => $resource,
+        path     => $path,
+    };
+
+    $this->_parseWebOfResource( $info, \@path );
+    $this->_parseTopicOfResource( $info, \@path );
+    $this->_parseAttachmentOfResource( $info, \@path );
+    $this->_parseFileOfResource( $info, \@path );
+
+    # anything else is an error
+    if ( scalar(@path) ) {
+        print STDERR "failed to parse resource $resource, path left: "
+          . join( ", ", @path ) . "\n"
+          if $this->{trace} & 2;
+        return;
+    }
+
+    $this->{_infoOfResource}{$path} = $info;
+
+    return $info;
+}
+
+# normalize the resource string into a proper foswiki path
+sub _getPathOfResource {
     my ( $this, $resource ) = @_;
 
     if ( defined $this->{location} && $resource =~ s/^$this->{location}// ) {
@@ -386,72 +435,136 @@ sub _parseResource {
         }
     }
 
-    # rebuild normalized resource
-    $resource = join( "/", @path );
+    # strip off hidden attribute from filename
+    @path = map { my $tmp = $_; $tmp =~ s/^\.//; $tmp } @path
+      if $this->{hideEmptyAttachmentDirs};
 
-    # descend through webs
-    my $web = '';
-    while ( scalar(@path) && $path[0] !~ /($extensionsRE)$/ ) {
-        $web .= ( $web ? '/' : '' ) . shift(@path);
-    }
+    return @path;
+}
 
-    my %info = (
-        type       => 'R',
-        web        => $web,
-        resource   => $resource,
-        topic      => shift(@path),
-        attachment => shift(@path),
-    );
+# consume a web prefix of the path
+sub _parseWebOfResource {
+    my ( $this, $info, $path ) = @_;
 
-    # anything else is an error
-    return if scalar(@path);
+    return unless $path && @$path;
 
-    # derive type from found resources and rebuild path
-    @path = ();
-    if ( $info{web} ) {
-        push @path, $info{web};
+    print STDERR "called _parseWebOfResource(@$path)\n" if $this->{trace} & 2;
+    my $web;
+    my $part = $path->[0];
 
-        if ( $info{topic} ) {
+    while (
+           $part
+        && !( $this->{extensionsRE} && $part =~ /$this->{extensionsRE}$/ )
+        && !(
+               $this->{attachmentsDirExtension}
+            && $part =~ /$this->{attachmentsDirExtension}$/
+        )
+      )
+    {
+        my $testWeb = ( $web // '' ) . ( $web ? '/' : '' ) . $part;
 
-            if ( $info{attachment} ) {
-                $info{topic} =~ s/$FILES_EXT$//;
-                $info{type} = 'A';
-
-                push @path, $info{topic};
-                push @path, $info{attachment};
-
-            }
-            else {
-
-                if ( $info{topic} =~ s/$FILES_EXT$// ) {
-                    $info{type} = 'D';
-                }
-                else {
-                    $info{type} = 'T';
-                    foreach my $v (@views) {
-                        my $e = $v->extension();
-                        if ( $info{topic} =~ s/$e// ) {
-                            $info{view} = $v;
-                            last;
-                        }
-                    }
-
-                    return unless $info{view};
-                }
-
-                push @path, $info{topic};
-            }
+        #if (Foswiki::Func::isValidWebName($testWeb))
+        if ( Foswiki::Func::webExists($testWeb) ) {
+            $web = $testWeb;
+            shift @$path;
+            $part = $path->[0];
         }
         else {
-            $info{type} = 'W';
+            last;
         }
     }
 
-    $info{path} = join( "/", @path );
+    if ($web) {
+        $info->{web}  = $web;
+        $info->{type} = 'W';
+    }
 
-    #print STDERR dump(\%info)."\n";
+    print STDERR "... web=" . ( $web // 'undef' ) . "\n" if $this->{trace} & 2;
+    return $web;
+}
 
-    return \%info;
+# consume a topic prefix of the path
+sub _parseTopicOfResource {
+    my ( $this, $info, $path ) = @_;
+
+    return unless $info->{web} && $path && @$path;
+
+    print STDERR "called _parseTopicOfResource(@$path)\n" if $this->{trace} & 2;
+
+    my $part = $path->[0];
+
+    $part =~ s/$this->{extensionsRE}// if $this->{extensionsRE};
+    $part =~ s/$this->{attachmentsDirExtension}$//
+      if $this->{attachmentsDirExtension};
+
+    if (   $part
+        && Foswiki::Func::topicExists( $info->{web}, $part )
+        && $part ne $this->{resourceLinkFileName} )
+    {
+        $info->{topic} = $part;
+        $info->{type}  = 'T';
+
+        if ( $this->{extensionsRE} && $path->[0] =~ /($this->{extensionsRE})$/ )
+        {
+            my $ext = $1;
+            foreach my $v ( @{ $this->{views} } ) {
+                my $e = $v->extension();
+                if ( $e eq $ext ) {
+                    $info->{view} = $v;
+                    last;
+                }
+            }
+        }
+        elsif ( !$this->{attachmentsDirExtension}
+            || $path->[0] =~ /$this->{attachmentsDirExtension}$/ )
+        {
+            $info->{type} = 'D';
+        }
+
+        shift @$path;
+    }
+
+    print STDERR "... topic=" . ( $info->{topic} // 'undef' ) . "\n"
+      if $this->{trace} & 2;
+    return $info->{topic};
+}
+
+# consume an attachment prefix of the path
+sub _parseAttachmentOfResource {
+    my ( $this, $info, $path ) = @_;
+
+    return unless $info->{web} && $info->{topic} && $path && @$path;
+
+    my $attachment;
+
+    my $part = $path->[0];
+    if (   $part
+        && $part ne $this->{resourceLinkFileName} )
+    {
+        $attachment = shift @$path;
+    }
+
+    if ($attachment) {
+        $info->{attachment} = $attachment;
+        $info->{type}       = 'A';
+    }
+
+    return $attachment;
+}
+
+# consume a virtual file prefix of the path
+sub _parseFileOfResource {
+    my ( $this, $info, $path ) = @_;
+
+    return unless $path && @$path;
+
+    my $part = $path->[0];
+    if ( $part && $part eq $this->{resourceLinkFileName} ) {
+        $info->{file} = $part;
+        $info->{type} = 'F';
+        shift @$path;
+        return $part;
+    }
 }
 
 # Because of different semantics at different levels in the Foswiki store
@@ -460,8 +573,9 @@ sub _parseResource {
 # _R_ - root (/)
 # _W_ - web
 # _T_ - topic (view)
-# _D_ - topic (attachments dir)
+# _D_ - attachments dir
 # _A_ - attachment (attachment data file)
+# _F_ - (virtual) file
 # This function determines which level is applicable from the path, and
 # redirects to the appropriate version.
 sub _dispatch {
@@ -478,7 +592,7 @@ sub _dispatch {
 
     $function = "_" . $info->{type} . "_" . $function;
 
-    print STDERR "Call $function for $info->{resource},  type $info->{type} ",
+    print STDERR "Call $function for $info->{path},  type $info->{type} ",
       join( ',', map { defined $_ ? $_ : 'undef' } @_ ), "\n"
       if ( $this->{trace} & 2 );
 
@@ -584,10 +698,10 @@ sub _checkName {
     # SMELL: should really do this, but Foswiki is totally lackadasical
     # about checking the legality of attachment names. It allows a
     # saveAttachment of an illegal name, so we have to as well.
-    #my ($sa) = Foswiki::Func::sanitizeAttachmentName($info->{attachment});
-    #if ($sa ne $info->{attachment}) {
-    #    return $this->_fail(POSIX::EBADF, $info);
-    #}
+    my ($sa) = Foswiki::Func::sanitizeAttachmentName( $info->{attachment} );
+    if ( $sa ne $info->{attachment} ) {
+        return $this->_fail( POSIX::EBADF, $info );
+    }
 
     return 1;
 }
@@ -769,6 +883,20 @@ sub _R_delete {
     return shift->_fail( POSIX::EPERM, @_ );
 }
 
+sub _R_displayName {
+}
+
+sub _F_displayName {
+}
+
+# Delete virtual files - always denied
+sub _F_delete {
+    return shift->_fail( POSIX::EPERM, @_ );
+}
+
+sub _A_displayName {
+}
+
 # Delete attachment - by renaming it to Trash/TrashAttachment
 sub _A_delete {
     my ( $this, $info ) = @_;
@@ -784,18 +912,47 @@ sub _A_delete {
         $n++;
     }
 
-    my $destination =
-        "/"
-      . $Foswiki::cfg{TrashWebName}
-      . "/TrashAttachment$FILES_EXT/"
-      . $info->{attachment}
-      . $n;
-
-    return $this->_A_rename( $info, $destination );
+    return $this->_A_rename(
+        $info,
+        {
+            web        => $Foswiki::cfg{TrashWebName},
+            topic      => "TrashAttachment$this->{attachmentsDirExtension}",
+            attachment => $info->{attachment},
+            type       => $info->{type},
+        }
+    );
 }
 
-# Delete topic - by renaming it to Trash
+# Delete topic view - by renaming the topic to Trash
 sub _T_delete {
+    my ( $this, $info ) = @_;
+    my $n = '';
+
+    while (
+        Foswiki::Func::topicExists(
+            $Foswiki::cfg{TrashWebName},
+            "$info->{topic}$n"
+        )
+      )
+    {
+        $n++;
+    }
+
+    return $this->_T_rename(
+        $info,
+        {
+            web      => $Foswiki::cfg{TrashWebName},
+            topic    => $info->{topic} . $n,
+            view     => $info->{view},
+            type     => $info->{type},
+            path     => $info->{path},
+            resource => $info->{resource},
+        }
+    );
+}
+
+# Delete attachment directory - by renaming the topic to Trash
+sub _D_delete {
     my ( $this, $info ) = @_;
     my $n = '';
     while (
@@ -808,23 +965,32 @@ sub _T_delete {
         $n++;
     }
 
-    my $destination =
-        "/"
-      . $Foswiki::cfg{TrashWebName} . '/'
-      . $info->{topic}
-      . $n
-      . $info->{view}->extension();
-    return $this->_T_rename( $info, $destination );
+    return $this->_D_rename(
+        $info,
+        {
+            web      => $Foswiki::cfg{TrashWebName},
+            topic    => $info->{topic} . $n,
+            view     => $info->{view},
+            type     => $info->{type},
+            path     => $info->{path},
+            resource => $info->{resource},
+        }
+    );
 }
 
-# Delete attachment directory - always denied
-sub _D_delete {
-    return shift->_fail( POSIX::EPERM, @_ );
-}
-
-# Delete web - always denied
+# Delete web - always denied .
+# SMELL: why not rename to Trash as webs can be renamed very well
 sub _W_delete {
     return shift->_fail( POSIX::EPERM, @_ );
+}
+
+sub _W_displayName {
+    my ( $this, $info ) = @_;
+
+    if ( Foswiki::Func::webExists( $info->{web} ) ) {
+        return Foswiki::Func::getTopicTitle( $info->{web},
+            $Foswiki::cfg{HomeTopicName} );
+    }
 }
 
 =pod
@@ -839,6 +1005,10 @@ sub rename {
     return shift->_dispatch( 'rename', _logical2site(@_) );
 }
 
+sub displayName {
+    return shift->_dispatch( 'displayName', _logical2site(@_) );
+}
+
 # Rename root - always denied
 sub _R_rename {
     return shift->_fail( POSIX::EPERM, @_ );
@@ -848,6 +1018,20 @@ sub _R_rename {
 sub _A_rename {
     my ( $this, $src_info, $destination ) = @_;
 
+    my $dst_info;
+    if ( ref($destination) ) {
+        $dst_info    = $destination;
+        $destination = '/'
+          . ( $dst_info->{web}        // '' ) . '/'
+          . ( $dst_info->{topic}      // '' ) . '/'
+          . ( $dst_info->{attachment} // '' );
+    }
+    else {
+        $dst_info = $this->_parseResource($destination);
+    }
+
+    return shift->_fail( POSIX::EPERM, @_ )
+      unless $this->{allowRenameAttachment};
     return 0 unless $this->_checkLock($src_info);
 
     unless (
@@ -856,6 +1040,7 @@ sub _A_rename {
         )
       )
     {
+        undef $this->{_infoOfResource}{ $src_info->{path} };
         return $this->_fail( POSIX::ENOENT, $src_info );
     }
     if ( !$this->_haveAccess( 'CHANGE', $src_info->{web}, $src_info->{topic} ) )
@@ -863,7 +1048,6 @@ sub _A_rename {
         return $this->_fail( POSIX::EACCES, $src_info );
     }
 
-    my $dst_info = $this->_parseResource($destination);
     if ( $dst_info->{type} ne 'A' ) {
         return $this->_fail( POSIX::EPERM, $dst_info,
             'Can only rename an attachment to another attachment' );
@@ -893,9 +1077,26 @@ sub _A_rename {
     return 1;
 }
 
+sub _T_displayName {
+    my ( $this, $info ) = @_;
+
+    if ( Foswiki::Func::topicExists( $info->{web}, $info->{topic} ) ) {
+        return Foswiki::Func::getTopicTitle( $info->{web}, $info->{topic} );
+    }
+}
+
 # Rename topic
 sub _T_rename {
     my ( $this, $src_info, $destination ) = @_;
+
+    return shift->_fail( POSIX::EPERM, @_ ) unless $this->{allowRenameTopic};
+
+    unless (
+        Foswiki::Func::topicExists( $src_info->{web}, $src_info->{topic} ) )
+    {
+        undef $this->{_infoOfResource}{ $src_info->{path} };
+        return $this->_fail( POSIX::ENOENT, $src_info );
+    }
 
     return 0 unless $this->_checkLock($src_info);
 
@@ -904,9 +1105,49 @@ sub _T_rename {
         return $this->_fail( POSIX::EACCES, $src_info );
     }
 
-    my $dst_info = $this->_parseResource($destination);
+    my $dst_info =
+      ref($destination) ? $destination : $this->_parseResource($destination);
 
     if ( $dst_info->{type} ne 'T' ) {
+        return $this->_fail( POSIX::EPERM, $src_info,
+            'Can only rename a topic to another topic' );
+    }
+
+    unless ( $this->_checkName($dst_info) ) {
+        return $this->_fail( POSIX::EINVAL, $dst_info );
+    }
+
+    if ( Foswiki::Func::topicExists( $dst_info->{web}, $dst_info->{topic} ) ) {
+        return $this->_fail( POSIX::EEXIST, $dst_info );
+    }
+
+    eval {
+        Foswiki::Func::moveTopic(
+            $src_info->{web}, $src_info->{topic},
+            $dst_info->{web}, $dst_info->{topic}
+        );
+    };
+    if ($@) {
+        return $this->_fail( POSIX::EPERM, $src_info, $@ );
+    }
+    return 1;
+}
+
+sub _D_rename {
+    my ( $this, $src_info, $destination ) = @_;
+
+    return shift->_fail( POSIX::EPERM, @_ ) unless $this->{allowRenameTopic};
+    return 0 unless $this->_checkLock($src_info);
+
+    if ( !$this->_haveAccess( 'CHANGE', $src_info->{web}, $src_info->{topic} ) )
+    {
+        return $this->_fail( POSIX::EACCES, $src_info );
+    }
+
+    my $dst_info =
+      ref($destination) ? $destination : $this->_parseResource($destination);
+
+    if ( $dst_info->{type} ne 'D' ) {
         return $this->_fail( POSIX::EPERM, $src_info,
             'Can only rename a topic to another topic' );
     }
@@ -935,12 +1176,10 @@ sub _M_rename {
     return shift->_fail( POSIX::EPERM, @_ );
 }
 
-sub _D_rename {
-    return shift->_fail( POSIX::EPERM, @_ );
-}
-
 sub _W_rename {
     my ( $this, $src_info, $destination ) = @_;
+
+    return shift->_fail( POSIX::EPERM, @_ ) unless $this->{allowRenameWeb};
 
     if ( !$this->_haveAccess( 'CHANGE', $src_info->{web} ) ) {
         return $this->_fail( POSIX::EACCES, $src_info );
@@ -1128,6 +1367,7 @@ sub _W_rmdir {
     my ( $this, $info ) = @_;
 
     unless ( Foswiki::Func::webExists( $info->{web} ) ) {
+        undef $this->{_infoOfResource}{ $info->{path} };
         return $this->_fail( POSIX::ENOENT, $info );
     }
     if (   !$this->_haveAccess( 'CHANGE', $info->{web} )
@@ -1203,8 +1443,11 @@ sub list {
 sub _R_list {
     my $this = shift;
 
-    my @list = grep { !/\// } Foswiki::Func::getListOfWebs('user,public');
+    my @list = grep { !/[\/\.]/ } Foswiki::Func::getListOfWebs('user,public');
+
     unshift( @list, '.' );
+    push( @list, $this->{resourceLinkFileName} )
+      if $this->{resourceLinkFileName};
 
     return \@list;
 }
@@ -1218,6 +1461,7 @@ sub _W_list {
     }
 
     if ( !Foswiki::Func::webExists( $info->{web} ) ) {
+        undef $this->{_infoOfResource}{ $info->{path} };
         return $this->_fail( POSIX::ENOENT, $info );
     }
 
@@ -1226,23 +1470,26 @@ sub _W_list {
         if (  !$this->{hideEmptyAttachmentDirs}
             || $this->_hasAttachments( $info->{web}, $f ) )
         {
-            push( @list, $f . $FILES_EXT );
+            push( @list, $f . $this->{attachmentsDirExtension} );
         }
 
-        foreach my $v (@views) {
+        foreach my $v ( @{ $this->{views} } ) {
             push( @list, $f . $v->extension() );
         }
     }
 
     foreach my $sweb ( Foswiki::Func::getListOfWebs('user,public') ) {
         next if $sweb eq $info->{web};
-        next unless $sweb =~ s/^$info->{web}\/+//;
+        next unless $sweb =~ s/^$info->{web}\b.//;
         next if $sweb =~ m#/#;
+        $sweb =~ s/\./\//g;
         push( @list, $sweb );
     }
 
     push( @list, '.' );
     push( @list, '..' );
+    push( @list, $this->{resourceLinkFileName} )
+      if $this->{resourceLinkFileName};
 
     return \@list;
 }
@@ -1275,6 +1522,8 @@ sub _D_list {
             }
         }
     }
+    push( @list, $this->{resourceLinkFileName} )
+      if $this->{resourceLinkFileName};
 
     return \@list;
 }
@@ -1283,6 +1532,7 @@ sub _T_list {
     my ( $this, $info ) = @_;
 
     if ( !Foswiki::Func::topicExists( $info->{web}, $info->{topic} ) ) {
+        undef $this->{_infoOfResource}{ $info->{path} };
         return $this->_fail( POSIX::ENOENT, $info );
     }
 
@@ -1297,6 +1547,7 @@ sub _A_list {
     my ( $this, $info ) = @_;
 
     if ( !Foswiki::Func::topicExists( $info->{web}, $info->{topic} ) ) {
+        undef $this->{_infoOfResource}{ $info->{path} };
         return $this->_fail( POSIX::ENOENT, $info );
     }
 
@@ -1320,8 +1571,11 @@ sub list_details {
 
     my $body = Foswiki::Func::loadTemplate('webdav_folder')
       || '<html><body>%TITLE%<p>%ENTRIES%</p></body></html>';
+
     my $title = $path;
-    if ( $title =~ /^.*\/([^\/]+)$FILES_EXT\/?$/o ) {
+    if (   $this->{attachmentsDirExtension}
+        && $title =~ /^.*\/([^\/]+)$this->{attachmentsDirExtension}\/?$/ )
+    {
         $title = "$1 - %MAKETEXT{\"Attachments\"}%";
     }
     else {
@@ -1342,7 +1596,9 @@ sub list_details {
             $entry = Foswiki::Func::expandTemplate('webdav-updir')
               || '<a href="%URL%">..</a><br />';
         }
-        elsif ( $FILES_EXT && $file =~ s/$FILES_EXT$//o ) {
+        elsif ($this->{attachmentsDirExtension}
+            && $file =~ s/$this->{attachmentsDirExtension}$// )
+        {
             $entry = Foswiki::Func::expandTemplate('webdav-dir')
               || '<a href="%URL%">%FILE%/</a><br />';
         }
@@ -1449,6 +1705,18 @@ sub _T_stat {
     return @stat;
 }
 
+sub _F_stat {
+    my ( $this, $info ) = @_;
+
+    if ( defined $info->{topic} ) {
+        return $this->_T_stat($info);
+    }
+    if ( defined $info->{web} ) {
+        return $this->_W_stat($info);
+    }
+    return $this->_R_stat($info);
+}
+
 sub _A_stat {
     my ( $this, $info ) = @_;
 
@@ -1516,6 +1784,7 @@ For example to perform a -d on a directory.
 
 sub test {
     my ( $this, $test, $path ) = @_;
+
     return $this->_dispatch( 'test', _logical2site($path), $test );
 }
 
@@ -1538,7 +1807,7 @@ sub _R_test {
     else {
 
         # SMELL: violating Store encapsulation
-        return eval { "-$type '$Foswiki::cfg{DataDir}'" };
+        return eval "-$type '$Foswiki::cfg{DataDir}'";
     }
 }
 
@@ -1588,11 +1857,12 @@ sub _A_test {
     my $file =
       "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}/$info->{attachment}";
 
-    return eval { "-$type $file" };
+    return eval "-$type $file";
 }
 
 sub _D_test {
     my ( $this, $info, $type ) = @_;
+
     if ( $type =~ /r/i ) {
 
         # File is readable by effective/real uid/gid.
@@ -1634,7 +1904,7 @@ sub _D_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return eval { "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}" };
+    return eval "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";
 }
 
 sub _T_test {
@@ -1674,12 +1944,19 @@ sub _T_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return
-      eval { "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt" };
+    return eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";
+}
+
+sub _F_test {
+    my ( $this, $info, $type ) = @_;
+
+    return 1 if $type =~ /[ref]/i;
+    return 0;
 }
 
 sub _W_test {
     my ( $this, $info, $type ) = @_;
+
     if ( $type =~ /r/i ) {
 
         # File is readable by effective/real uid/gid.
@@ -1711,7 +1988,7 @@ sub _W_test {
     # lpSbctugkTBzsMAC
     my $file = "$Foswiki::cfg{DataDir}/$info->{web}";
 
-    return eval { "-$type $file" };
+    return eval "-$type $file";
 }
 
 =pod
@@ -1751,6 +2028,23 @@ sub _T_open_read {
     }
 
     return $info->{view}->read( $info->{web}, $info->{topic} );
+}
+
+sub _F_open_read {
+    my ( $this, $info ) = @_;
+
+    my $url = Foswiki::Func::getViewUrl( $info->{web}, $info->{topic} );
+
+    return IO::String->new(<<"HERE");
+<html>    
+  <head>      
+    <meta http-equiv="refresh" content="0;URL='$url'" />    
+  </head>    
+  <body> 
+  </body>  
+</html>
+HERE
+
 }
 
 sub _A_open_read {
@@ -2250,7 +2544,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011-2014 WikiRing http://wikiring.com
 Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2014-2020 Foswiki Contributors 
+Copyright (C) 2014-2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

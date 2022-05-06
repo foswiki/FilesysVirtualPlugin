@@ -12,12 +12,13 @@ use strict;
 use warnings;
 
 use Filesys::Virtual::Plain;
-push( @ISA, 'Filesys::Virtual::Plain' );
+our @ISA = ('Filesys::Virtual::Plain');
 
 use POSIX ':errno_h';
 use File::Path;
 use Data::Dumper;
 use Filesys::Virtual::Locks;
+use Encode ();
 
 our $VAR1;
 our $VERSION  = '1.8.0';
@@ -63,6 +64,37 @@ sub login {
 sub list {
     my ( $this, $path ) = @_;
     return grep { !/\Q${METAFILE}\E/ } $this->SUPER::list($path);
+}
+
+sub list_details {
+    my ( $this, $path ) = @_;
+
+    my $content = join( "\n", $this->SUPER::list_details($path) );
+    my $page = <<"HERE";
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>WebDAV $path</title>
+  </head>
+  <body>
+    <pre>
+$content
+    </pre>
+  </body>
+</html>
+HERE
+
+    return Encode::decode_utf8($page);
+}
+
+# requires a 0 return on success in HTTP::WebDAV, and an error otherwise
+sub close_write {
+    my ( $this, $fh ) = @_;
+
+    $fh->close();
+
+    return 0;
 }
 
 # Filesys::Virtual::Plain::rmdir won't delete a dir unless it is empty
@@ -217,7 +249,7 @@ sub _attrsFile {
 __END__
 
 Copyright (C) 2009-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2020 Foswiki Contributors 
+Copyright (C) 2012-2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

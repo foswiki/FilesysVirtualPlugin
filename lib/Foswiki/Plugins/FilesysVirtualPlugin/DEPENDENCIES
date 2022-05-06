@@ -1,8 +1,9 @@
-Filesys::Virtual,>=0,cpan,Standard perl module
+Data::Dumper,>=0,cpan,Required perl module
+Filesys::Virtual,>=0,cpan,Required perl module
 Storable,>=0,cpan,Required, used for the locks database
 POSIX,>=0,cpan,Standard perl module
 File::Path,>=0,cpan,Standard perl module
 IO::File,>=0,cpan,Standard perl module
-IO::String,>=0,cpan,Standard perl module
+IO::String,>=0,cpan,Required perl module
 Foswiki::Plugins::WysiwygPlugin,>=0,perl,Optional, required for .html view
 JSON,>=0,cpan,Optional, required for the .json view

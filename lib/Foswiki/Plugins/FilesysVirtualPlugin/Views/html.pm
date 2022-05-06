@@ -2,14 +2,23 @@
 package Foswiki::Plugins::FilesysVirtualPlugin::Views::html;
 
 use strict;
-use IO::String                                ();
-use Foswiki::Func                             ();
-use Foswiki::Plugins::WysiwygPlugin::Handlers ();
+use warnings;
 
-our $VERSION = '1.6.1';
-our $RELEASE = '%$TRACKINGCODE%';
+use IO::String                                   ();
+use Foswiki::Func                                ();
+use Foswiki::Plugins::WysiwygPlugin::Handlers    ();
+use Foswiki::Plugins::FilesysVirtualPlugin::View ();
 
-sub extension { '.html' }
+our @ISA = qw( Foswiki::Plugins::FilesysVirtualPlugin::View );
+
+sub new {
+    my $class = shift;
+
+    my $this = $class->SUPER::new(@_);
+    $this->extension(".html");
+
+    return $this;
+}
 
 sub read {
     my ( $this, $web, $topic ) = @_;
@@ -18,6 +27,7 @@ sub read {
     $text =
       Foswiki::Plugins::WysiwygPlugin::Handlers::TranslateTML2HTML( $text, $web,
         $topic );
+
     return IO::String->new("<html><body>$text</body></html>");
 }
 
@@ -31,8 +41,7 @@ sub write {
     $text = Foswiki::Plugins::WysiwygPlugin::Handlers::TranslateHTML2TML( $text,
         $topic, $web );
 
-    eval { Foswiki::Func::saveTopic( $web, $topic, $meta, $text ); };
-    return $@;
+    return $this->saveTopic( $web, $topic, $meta, $text );
 }
 
 1;
@@ -40,7 +49,7 @@ sub write {
 __END__
 
 Copyright (C) 2010-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2020 Foswiki Contributors 
+Copyright (C) 2012-2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

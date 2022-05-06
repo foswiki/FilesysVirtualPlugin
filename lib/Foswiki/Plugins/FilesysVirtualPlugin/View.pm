@@ -1,46 +1,52 @@
 # See bottom of file for license and copyright information
-package Foswiki::Plugins::FilesysVirtualPlugin::Views::txt;
+package Foswiki::Plugins::FilesysVirtualPlugin::View;
 
 use strict;
 use warnings;
 
-use IO::String                                   ();
-use Encode                                       ();
-use Foswiki::Func                                ();
-use Foswiki::Plugins::FilesysVirtualPlugin::View ();
-
-our @ISA = qw( Foswiki::Plugins::FilesysVirtualPlugin::View );
-
 sub new {
     my $class = shift;
 
-    my $this = $class->SUPER::new(@_);
-    $this->extension(".txt");
+    my $this = bless( {@_}, $class );
 
     return $this;
 }
 
-sub read {
-    my ( $this, $web, $topic ) = @_;
+sub extension {
+    my ( $this, $ext ) = @_;
 
-    my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
-    return IO::String->new( Encode::encode_utf8($text) );
+    $this->{_extension} = $ext if defined $ext;
+
+    return $this->{_extension};
+}
+
+sub read {
+
+    # my ( $this, $web, $topic ) = @_;
+
+    die "not implemented";
 }
 
 sub write {
-    my ( $this, $web, $topic, $text ) = @_;
 
-    my ( $meta, $dummy ) = Foswiki::Func::readTopic( $web, $topic );
+    #my ( $this, $web, $topic, $text ) = @_;
 
-    return $this->saveTopic( $web, $topic, $meta, Encode::decode_utf8($text) );
+    die "not implemented";
+}
+
+sub saveTopic {
+    my ( $this, $web, $topic, $meta, $text ) = @_;
+
+    eval { Foswiki::Func::saveTopic( $web, $topic, $meta, $text ); };
+
+    return $@;
 }
 
 1;
 
 __END__
 
-Copyright (C) 2010-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2022 Foswiki Contributors 
+Copyright (C) 2022 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will
@@ -56,6 +62,3 @@ with us you not only gain direct access to the support of some of the
 most experienced Foswiki developers working on the project, but you are
 also helping to make the further development of open-source Foswiki
 possible. 
-
-Author: Crawford Currie http://c-dot.co.uk
-

@@ -89,8 +89,15 @@ sub set_up_for_verify {
 
 HERE
 
-    $this->{handler} = new Filesys::Virtual::Foswiki( { trace => 0 } );
+    $this->{handler} = new Filesys::Virtual::Foswiki(
+        {
+            trace                   => 0,
+            attachmentsDirExtension => $F,
+            hideEmptyAttachmentDirs => 0,
+        }
+    );
     $Foswiki::Plugins::SESSION = $this->{session};
+
 }
 
 sub tear_down {
@@ -247,10 +254,14 @@ sub verify_modtime_A {
 
 sub verify_list_R {
     my $this = shift;
+
     my @elist = grep { !/\// } Foswiki::Func::getListOfWebs('public,user');
     push( @elist, '.' );
+    push @elist, $this->{handler}{resourceLinkFileName}
+      if $this->{handler}{resourceLinkFileName};
     @elist = sort @elist;
-    my @alist = $this->{handler}->list('/');
+
+    my @alist = sort $this->{handler}->list('/');
     while ( scalar(@elist) && scalar(@alist) ) {
         $this->assert_str_equals( $elist[0], $alist[0],
             "\n" . join( ' ', @elist ) . "\n" . join( ' ', @alist ) );
@@ -277,6 +288,8 @@ sub verify_list_W {
     }
     push( @elist, '..' );
     push( @elist, '.' );
+    push @elist, $this->{handler}{resourceLinkFileName}
+      if $this->{handler}{resourceLinkFileName};
     @elist = sort @elist;
 
     #print STDERR "E ".join(' ',@elist),"\n";
@@ -284,9 +297,10 @@ sub verify_list_W {
     my @alist = sort $this->{handler}->list("/$this->{test_web}");
 
     #print STDERR "A ".join(' ',@alist),"\n";
+
     while ( scalar(@elist) && scalar(@alist) ) {
         $this->assert_str_equals( $elist[0], $alist[0],
-            "\n" . join( ' ', @elist ) . "\n" . join( ' ', @alist ) );
+            "\n elements don't match:\n E - $elist[0]\n A - $alist[0]\n" );
         shift @elist;
         shift @alist;
     }
@@ -298,15 +312,21 @@ sub verify_list_W {
 sub verify_list_D {
     my $this = shift;
     $this->_make_attachments_fixture();
+
     my @elist = ( '.', '..', 'A.gif', 'B C.jpg', $extreme_attachment );
+    push @elist, $this->{handler}{resourceLinkFileName}
+      if $this->{handler}{resourceLinkFileName};
+
     $this->{handler}->location('/omg');
     my @alist =
       $this->{handler}->list("/omg/$this->{test_web}/$this->{test_topic}$F");
+
     while ( scalar(@elist) && scalar(@alist) ) {
         $this->assert_str_equals( $elist[0], $alist[0] );
         shift @elist;
         shift @alist;
     }
+
     $this->assert_equals( scalar(@elist), scalar(@alist) );
 }
 
@@ -418,6 +438,7 @@ sub verify_mkdir_W_unexisting {
     my $web   = "$this->{test_web}/NUMPTY";
     my @elist = Foswiki::Func::getTopicList('_default');
     $this->assert( $this->{handler}->mkdir("/$web") );
+
     my @alist = Foswiki::Func::getTopicList($web);
     while ( scalar(@elist) && scalar(@alist) ) {
         $this->assert_str_equals( $elist[0], $alist[0] );
@@ -464,24 +485,22 @@ sub verify_delete_R {
 
 sub verify_delete_W {
     my $this = shift;
-    Foswiki::Func::createWeb("$this->{test_web}/blah");
-    $this->assert( !$this->{handler}->delete("/$this->{test_web}/blah") );
-    $this->assert( Foswiki::Func::webExists("$this->{test_web}/blah") );
+    Foswiki::Func::createWeb("$this->{test_web}/Blah");
+    $this->assert( !$this->{handler}->delete("/$this->{test_web}/Blah") );
+    $this->assert( Foswiki::Func::webExists("$this->{test_web}/Blah") );
 }
 
 sub verify_delete_D {
     my $this = shift;
 
-    # Delete an attachments directory; refuse
     $this->_make_attachments_fixture();
     $this->assert(
-        !$this->{handler}->delete("/$this->{test_web}/$this->{test_topic}$F") );
+        $this->{handler}->delete("/$this->{test_web}/$this->{test_topic}$F") );
 }
 
 sub verify_delete_T {
     my $this = shift;
 
-    $this->assert( !$this->{handler}->delete("/$this->{test_web}/NotATopic") );
     foreach my $v (@views) {
         my $n = '';
         while (
@@ -570,39 +589,39 @@ sub verify_rmdir_W {
     my $this = shift;
 
     # non-existant
-    $this->assert( !$this->{handler}->rmdir("/$this->{test_web}/blah") );
-    Foswiki::Func::createWeb("$this->{test_web}/blah");
-    Foswiki::Func::saveTopic( "$this->{test_web}/blah", "BlahBlah", undef,
+    $this->assert( !$this->{handler}->rmdir("/$this->{test_web}/Blah") );
+    Foswiki::Func::createWeb("$this->{test_web}/Blah");
+    Foswiki::Func::saveTopic( "$this->{test_web}/Blah", "BlahBlah", undef,
         "Numpty" );
     my $n = '';
     while (
         Foswiki::Func::webExists(
-            "$Foswiki::cfg{TrashWebName}/$this->{test_web}/blah$n")
+            "$Foswiki::cfg{TrashWebName}/$this->{test_web}/Blah$n")
       )
     {
         $n++;
     }
 
     # Web not empty
-    $this->assert( !$this->{handler}->rmdir("/$this->{test_web}/blah"), $! );
+    $this->assert( !$this->{handler}->rmdir("/$this->{test_web}/Blah"), $! );
 
     # empty it
-    $this->assert( Foswiki::Func::webExists("$this->{test_web}/blah") );
-    foreach my $topic ( $this->{handler}->list("/$this->{test_web}/blah") ) {
+    $this->assert( Foswiki::Func::webExists("$this->{test_web}/Blah") );
+    foreach my $topic ( $this->{handler}->list("/$this->{test_web}/Blah") ) {
         next if $topic =~ /^\.+$/;
         next if $topic =~ /^WebPreferences/;
-        $this->{handler}->delete("/$this->{test_web}/blah/$topic");
+        $this->{handler}->delete("/$this->{test_web}/Blah/$topic");
     }
 
     # make sure the web is still there
-    $this->assert( Foswiki::Func::webExists("$this->{test_web}/blah") );
+    $this->assert( Foswiki::Func::webExists("$this->{test_web}/Blah") );
 
     # stomp the web
-    $this->assert( $this->{handler}->rmdir("/$this->{test_web}/blah"), $! );
-    $this->assert( !Foswiki::Func::webExists("$this->{test_web}/blah") );
+    $this->assert( $this->{handler}->rmdir("/$this->{test_web}/Blah"), $! );
+    $this->assert( !Foswiki::Func::webExists("$this->{test_web}/Blah") );
     $this->assert(
         Foswiki::Func::webExists(
-            "$Foswiki::cfg{TrashWebName}/$this->{test_web}/blah$n")
+            "$Foswiki::cfg{TrashWebName}/$this->{test_web}/Blah$n")
     );
 
     # non-empty
@@ -637,10 +656,22 @@ sub verify_rmdir_T {
     my $this = shift;
 
     # Should just delete the topic
+    my $isFirst = 1;
     foreach my $v (@views) {
-        $this->assert(
-            $this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}.$v")
-        );
+        if ($isFirst) {
+            $isFirst = 0;
+            $this->assert( $this->{handler}
+                  ->rmdir("/$this->{test_web}/$this->{test_topic}.$v") );
+            $this->assert(
+                !Foswiki::Func::topicExists(
+                    $this->{test_web}, $this->{test_topic}
+                )
+            );
+        }
+        else {
+            $this->assert( !$this->{handler}
+                  ->rmdir("/$this->{test_web}/$this->{test_topic}.$v") );
+        }
     }
 }
 
