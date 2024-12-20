@@ -6,6 +6,7 @@ lib/Filesys/Virtual/Locks.pm 0644
 lib/Filesys/Virtual/PlainPlusAttrs.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Config.spec 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/DEPENDENCIES 0644
+lib/Foswiki/Plugins/FilesysVirtualPlugin/MANIFEST 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/Permissions.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin.pm 0644
 lib/Foswiki/Plugins/FilesysVirtualPlugin/View.pm 0644

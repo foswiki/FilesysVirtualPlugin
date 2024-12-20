@@ -1,14 +1,16 @@
 # See bottom of file for license and copyright information
-use strict;
-use Fcntl;
-use BerkeleyDB;
-
-use Foswiki;
-use Foswiki::Func;
+package Foswiki::Plugins::FilesysVirtualPlugin::Permissions;
 
 # Permissions DB object. Processes protections info out of topic text
 # and maintains a database of protections, using BerkelyDB.
-package Foswiki::Plugins::FilesysVirtualPlugin::Permissions;
+
+use strict;
+use warnings;
+
+use Fcntl;
+use BerkeleyDB;
+use Foswiki;
+use Foswiki::Func;
 
 our $VERSION = '1.6.1';
 
@@ -189,7 +191,7 @@ __END__
 Copyright (C) 2008-2010 WikiRing http://wikiring.com
 Copyright (C) 2004 WindRiver Inc.
 Copyright (C) 2008-2012 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2012-2022 Foswiki Contributors 
+Copyright (C) 2012-2024 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

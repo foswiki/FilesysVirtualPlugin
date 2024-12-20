@@ -53,7 +53,7 @@ sub write {
 __END__
 
 Copyright (C) 2010-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2022 Foswiki Contributors 
+Copyright (C) 2012-2024 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

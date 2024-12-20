@@ -820,7 +820,7 @@ sub _fail {
         my $path = ref($info) ? $info->{path} : $info;
         print STDERR "$op $path failed; $mess\n";
     }
-    $! = $code;
+    $! = $code;    ## no critic
     return;
 }
 
@@ -881,6 +881,9 @@ sub delete {
 # Delete root - always denied
 sub _R_delete {
     return shift->_fail( POSIX::EPERM, @_ );
+}
+
+sub _D_displayName {
 }
 
 sub _R_displayName {
@@ -1560,7 +1563,7 @@ sub _A_list {
 
 =pod
 
-=head2 list_details($file)
+=head2 list_details($path)
 
 Returns the files list formatted as an HTML page.
 
@@ -1582,6 +1585,13 @@ sub list_details {
         $title =~ s/^.*\/([^\/]+)\/?$/$1/;
     }
 
+    my $upDirFormat = Foswiki::Func::expandTemplate('webdav-updir')
+      // '<a href="%URL%">..</a><br />';
+    my $dirFormat = Foswiki::Func::expandTemplate('webdav-dir')
+      // '<a href="%URL%">%FILE%/</a><br />';
+    my $fileFormat = Foswiki::Func::expandTemplate('webdav-file')
+      // '<a href="%URL%">%FILE%</a><br />';
+
     my @entries;
     foreach my $file ( sort $this->list($path) ) {
         next if $file eq '.';
@@ -1593,18 +1603,15 @@ sub list_details {
         $url .= $file;
         my $entry;
         if ( $file eq '..' ) {
-            $entry = Foswiki::Func::expandTemplate('webdav-updir')
-              || '<a href="%URL%">..</a><br />';
+            $entry = $upDirFormat;
         }
         elsif ($this->{attachmentsDirExtension}
             && $file =~ s/$this->{attachmentsDirExtension}$// )
         {
-            $entry = Foswiki::Func::expandTemplate('webdav-dir')
-              || '<a href="%URL%">%FILE%/</a><br />';
+            $entry = $dirFormat;
         }
         else {
-            $entry = Foswiki::Func::expandTemplate('webdav-file')
-              || '<a href="%URL%">%FILE%</a><br />';
+            $entry = $fileFormat;
         }
         $entry =~ s/%URL%/$url/g;
         $entry =~ s/%FILE%/$file/g;
@@ -1807,7 +1814,7 @@ sub _R_test {
     else {
 
         # SMELL: violating Store encapsulation
-        return eval "-$type '$Foswiki::cfg{DataDir}'";
+        return eval "-$type '$Foswiki::cfg{DataDir}'";    ## no critic
     }
 }
 
@@ -1857,7 +1864,7 @@ sub _A_test {
     my $file =
       "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}/$info->{attachment}";
 
-    return eval "-$type $file";
+    return eval "-$type $file";    ## no critic
 }
 
 sub _D_test {
@@ -1904,7 +1911,9 @@ sub _D_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return eval "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";
+    return
+      eval
+      "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";   ## no critic
 }
 
 sub _T_test {
@@ -1944,7 +1953,9 @@ sub _T_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";
+    return
+      eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt"
+      ;    ## no critic
 }
 
 sub _F_test {
@@ -1988,7 +1999,7 @@ sub _W_test {
     # lpSbctugkTBzsMAC
     my $file = "$Foswiki::cfg{DataDir}/$info->{web}";
 
-    return eval "-$type $file";
+    return eval "-$type $file";    ## no critic
 }
 
 =pod
@@ -2163,7 +2174,7 @@ sub _A_closeHandle {
 sub _T_closeHandle {
     my ( $this, $fh, $fn, $rec ) = @_;
 
-    local $/;
+    local $/;    ## no critic
     my $text = <$fh>;
     close($fh);
 
@@ -2544,7 +2555,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011-2014 WikiRing http://wikiring.com
 Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2014-2022 Foswiki Contributors 
+Copyright (C) 2014-2024 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

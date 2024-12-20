@@ -18,8 +18,8 @@ use File::Spec;
 use JSON;
 use Data::Dumper;
 
-our $T      = '.txt';
-our $F      = '_files';
+our $TXT    = '.txt';
+our $FILES  = '_files';
 our $tmpdir = File::Spec->tmpdir();
 our @views;
 
@@ -51,8 +51,8 @@ sub set_up_for_verify {
       'txt,html,json,perl,raw';
     @views = split( ',', $Foswiki::cfg{Plugins}{FilesysVirtualPlugin}{Views} );
 
-    $this->assert($T);
-    $this->assert($F);
+    $this->assert($TXT);
+    $this->assert($FILES);
 
     my $FILE;
     open( $FILE, ">", "$tmpdir/testfile.gif" );
@@ -92,7 +92,7 @@ HERE
     $this->{handler} = new Filesys::Virtual::Foswiki(
         {
             trace                   => 0,
-            attachmentsDirExtension => $F,
+            attachmentsDirExtension => $FILES,
             hideEmptyAttachmentDirs => 0,
         }
     );
@@ -226,9 +226,9 @@ sub verify_modtime_W {
 sub verify_modtime_D {
     my $this = shift;
     $this->_make_attachments_fixture();
-    $this->_check_modtime( "/$this->{test_web}/$this->{test_topic}$F",
+    $this->_check_modtime( "/$this->{test_web}/$this->{test_topic}$FILES",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}" );
-    $this->_check_modtime( "/$this->{test_web}/NoView$F",
+    $this->_check_modtime( "/$this->{test_web}/NoView$FILES",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/NoView" );
 }
 
@@ -246,9 +246,9 @@ sub verify_modtime_T {
 sub verify_modtime_A {
     my $this = shift;
     $this->_make_attachments_fixture();
-    $this->_check_modtime( "/$this->{test_web}/$this->{test_topic}$F/A.gif",
+    $this->_check_modtime( "/$this->{test_web}/$this->{test_topic}$FILES/A.gif",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}/A.gif" );
-    $this->_check_modtime( "/$this->{test_web}/NoView$F/A.gif",
+    $this->_check_modtime( "/$this->{test_web}/NoView$FILES/A.gif",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/NoView/A.gif" );
 }
 
@@ -275,7 +275,7 @@ sub verify_list_W {
     my $this = shift;
     my @elist;
     foreach my $f ( Foswiki::Func::getTopicList( $this->{test_web} ) ) {
-        push( @elist, "$f$F" );
+        push( @elist, "$f$FILES" );
         foreach my $v (@views) {
             push( @elist, "$f.$v" );
         }
@@ -283,7 +283,7 @@ sub verify_list_W {
     foreach my $sweb ( Foswiki::Func::getListOfWebs('user,public') ) {
         next if $sweb eq $this->{test_web};
         next unless $sweb =~ s/^$this->{test_web}\/+//;
-        next if $sweb =~ m#/#;
+        next if $sweb     =~ m#/#;
         push( @elist, $sweb );
     }
     push( @elist, '..' );
@@ -319,7 +319,8 @@ sub verify_list_D {
 
     $this->{handler}->location('/omg');
     my @alist =
-      $this->{handler}->list("/omg/$this->{test_web}/$this->{test_topic}$F");
+      $this->{handler}
+      ->list("/omg/$this->{test_web}/$this->{test_topic}$FILES");
 
     while ( scalar(@elist) && scalar(@alist) ) {
         $this->assert_str_equals( $elist[0], $alist[0] );
@@ -345,7 +346,8 @@ sub verify_list_A {
     my $this = shift;
     $this->_make_attachments_fixture();
     my @alist =
-      $this->{handler}->list("$this->{test_web}/$this->{test_topic}$F/A.gif");
+      $this->{handler}
+      ->list("$this->{test_web}/$this->{test_topic}$FILES/A.gif");
     $this->assert_equals( 1, scalar(@alist) );
     $this->assert_str_equals( "A.gif", $alist[0] );
 }
@@ -372,13 +374,15 @@ sub verify_stat_W {
 sub verify_stat_D {
     my $this = shift;
     $this->_check_stat(
-        "/$this->{test_web}/$this->{test_topic}$F",
+        "/$this->{test_web}/$this->{test_topic}$FILES",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}",
         oct(1777)
     );
-    $this->_check_stat( "/$this->{test_web}/NoView$F",
+    $this->_check_stat(
+        "/$this->{test_web}/NoView$FILES",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/NoView",
-        oct(1111) );
+        oct(1111)
+    );
 }
 
 sub verify_stat_T {
@@ -402,7 +406,7 @@ sub verify_stat_T {
 sub verify_stat_A {
     my $this = shift;
     $this->_make_attachments_fixture();
-    $this->_check_stat( "/$this->{test_web}/$this->{test_topic}$F/A.gif",
+    $this->_check_stat( "/$this->{test_web}/$this->{test_topic}$FILES/A.gif",
         "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}/A.gif" );
 }
 
@@ -450,7 +454,7 @@ sub verify_mkdir_W_unexisting {
 
 sub verify_mkdir_D_withtopic {
     my $this = shift;
-    my $web  = "$this->{test_web}/$this->{test_topic}$F";
+    my $web  = "$this->{test_web}/$this->{test_topic}$FILES";
     $this->assert( $this->{handler}->mkdir("/$web") );
     $this->assert(
         -e "$Foswiki::cfg{PubDir}/$this->{test_web}/$this->{test_topic}" );
@@ -471,7 +475,7 @@ sub verify_mkdir_A {
     my $this = shift;
 
     # Can't mkdir in an attachments dir
-    my $web = "$this->{test_web}/$this->{test_topic}$F/nah";
+    my $web = "$this->{test_web}/$this->{test_topic}$FILES/nah";
     $this->assert( !$this->{handler}->mkdir("/$web") );
     $this->assert($!);
 }
@@ -495,7 +499,8 @@ sub verify_delete_D {
 
     $this->_make_attachments_fixture();
     $this->assert(
-        $this->{handler}->delete("/$this->{test_web}/$this->{test_topic}$F") );
+        $this->{handler}->delete("/$this->{test_web}/$this->{test_topic}$FILES")
+    );
 }
 
 sub verify_delete_T {
@@ -567,10 +572,10 @@ sub verify_delete_T {
 sub verify_delete_A {
     my $this = shift;
     $this->assert( !$this->{handler}
-          ->delete("/$this->{test_web}/$this->{test_topic}$F/A.gif") );
+          ->delete("/$this->{test_web}/$this->{test_topic}$FILES/A.gif") );
     $this->_make_attachments_fixture();
     $this->assert( $this->{handler}
-          ->delete("/$this->{test_web}/$this->{test_topic}$F/A.gif") );
+          ->delete("/$this->{test_web}/$this->{test_topic}$FILES/A.gif") );
     $this->assert(
         !Foswiki::Func::attachmentExists(
             $this->{test_web}, "$this->{test_topic}", "A.gif"
@@ -633,23 +638,26 @@ sub verify_rmdir_D {
 
     # non-existant
     $this->assert(
-        !$this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$F") );
+        !$this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$FILES")
+    );
     $this->_make_attachments_fixture();
 
     # not empty
     $this->assert(
-        !$this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$F") );
+        !$this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$FILES")
+    );
 
     # empty it
     foreach my $fn ( 'A.gif', 'B C.jpg', $extreme_attachment ) {
         $this->assert(
             $this->{handler}
-              ->delete("/$this->{test_web}/$this->{test_topic}$F/$fn"),
+              ->delete("/$this->{test_web}/$this->{test_topic}$FILES/$fn"),
             $!
         );
     }
     $this->assert(
-        $this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$F") );
+        $this->{handler}->rmdir("/$this->{test_web}/$this->{test_topic}$FILES")
+    );
 }
 
 sub verify_rmdir_T {
@@ -679,7 +687,7 @@ sub verify_rmdir_A {
     my $this = shift;
     $this->_make_attachments_fixture();
     $this->assert( $this->{handler}
-          ->rmdir("/$this->{test_web}/$this->{test_topic}$F/A.gif") );
+          ->rmdir("/$this->{test_web}/$this->{test_topic}$FILES/A.gif") );
     $this->assert(
         !Foswiki::Func::attachmentExists(
             $this->{test_web}, $this->{test_topic}, "A.gif"
@@ -699,9 +707,8 @@ sub verify_open_read_W {
 
 sub verify_open_read_D {
     my $this = shift;
-    $this->assert(
-        !$this->{handler}->open_read("/$this->{test_web}/$this->{test_topic}$F")
-    );
+    $this->assert( !$this->{handler}
+          ->open_read("/$this->{test_web}/$this->{test_topic}$FILES") );
 }
 
 sub verify_open_read_T {
@@ -711,7 +718,7 @@ sub verify_open_read_T {
           $this->{handler}
           ->open_read("/$this->{test_web}/$this->{test_topic}.$v");
         $this->assert($fh);
-        local $/;
+        local $/;    ## no critic
         my $data = <$fh>;
         $this->assert( $this->{handler}->close_read($fh) );
         $this->assert( $data =~ /BLEEGLE/s, $data );
@@ -723,9 +730,9 @@ sub verify_open_read_A {
     $this->_make_attachments_fixture();
     my $fh =
       $this->{handler}
-      ->open_read("/$this->{test_web}/$this->{test_topic}$F/A.gif");
+      ->open_read("/$this->{test_web}/$this->{test_topic}$FILES/A.gif");
     $this->assert( $fh, $! );
-    local $/;
+    local $/;    ## no critic
     my $data = <$fh>;
     $this->assert( $this->{handler}->close_read($fh) );
     $this->assert( $data =~ /Blah/s );
@@ -744,7 +751,7 @@ sub verify_open_write_W {
 sub verify_open_write_D {
     my $this = shift;
     $this->assert( !$this->{handler}
-          ->open_write("/$this->{test_web}/$this->{test_topic}$F") );
+          ->open_write("/$this->{test_web}/$this->{test_topic}$FILES") );
 }
 
 our $kino =
@@ -794,15 +801,15 @@ sub verify_open_write_A {
     # Existing attachment
     my $fh =
       $this->{handler}
-      ->open_write("/$this->{test_web}/$this->{test_topic}$F/A.gif");
+      ->open_write("/$this->{test_web}/$this->{test_topic}$FILES/A.gif");
     $this->assert( $fh, $! );
     print $fh "BINGO";
     $this->assert( !$this->{handler}->close_write($fh) );
     $fh =
       $this->{handler}
-      ->open_read("/$this->{test_web}/$this->{test_topic}$F/A.gif");
+      ->open_read("/$this->{test_web}/$this->{test_topic}$FILES/A.gif");
     $this->assert( $fh, $! );
-    local $/;
+    local $/;    ## no critic
     my $data = <$fh>;
     $this->assert( $this->{handler}->close_read($fh) );
     $this->assert( $data !~ /Blah/s, $data );
@@ -811,7 +818,7 @@ sub verify_open_write_A {
     # New attachment
     $fh =
       $this->{handler}
-      ->open_write("/$this->{test_web}/$this->{test_topic}$F/D.gif");
+      ->open_write("/$this->{test_web}/$this->{test_topic}$FILES/D.gif");
     $this->assert( $fh, $! );
     print $fh "NEWBIE";
     $this->assert( !$this->{handler}->close_write($fh) );
@@ -822,9 +829,9 @@ sub verify_open_write_A {
     );
     $fh =
       $this->{handler}
-      ->open_read("/$this->{test_web}/$this->{test_topic}$F/A.gif");
+      ->open_read("/$this->{test_web}/$this->{test_topic}$FILES/A.gif");
     $this->assert( $fh, $! );
-    local $/;
+    local $/;    ## no critic
     $data = <$fh>;
     $this->assert( $this->{handler}->close_read($fh) );
     $this->assert( $data =~ /NEWBIE/s, $data );

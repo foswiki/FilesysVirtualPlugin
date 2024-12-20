@@ -1,4 +1,4 @@
-%META:TOPICINFO{author="ProjectContributor" date="1573556025" format="1.1" version="1"}%
+%META:TOPICINFO{author="ProjectContributor" date="1734687991" format="1.1" version="1"}%
 ---+!! !FilesysVirtualPlugin
 %FORMFIELD{"Description"}%
 
@@ -124,6 +124,7 @@ Many thanks to the following sponsors for supporting this work:
 
 ---++ Change History
 %TABLE{columnwidths="7em" tablewidth="100%"}%
+|  20 Dec 2024: | improve performance reading templates |
 |  06 May 2022: | fixed unicode handling of views; extension for raw is =.raw.txt=; extension for perl is now =.pl= (Foswiki:Main/MichaelDaum) |
 |  20 Oct 2020: | make it work on subwebs (Foswiki:Main/MichaelDaum) |
 |  12 Nov 2019: | enable password validation by default; fix several issues flagged by perlcrit (Foswiki:Main/MichaelDaum) |
@@ -133,7 +134,7 @@ Many thanks to the following sponsors for supporting this work:
 
 %META:FORM{name="PackageForm"}%
 %META:FIELD{name="Author" title="Author" value="Crawford Currie http://c-dot.co.uk"}%
-%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk; 2011-2022 Foswiki Contributors"}%
+%META:FIELD{name="Copyright" title="Copyright" value="&copy; 2008 !KontextWork.de, &copy; 2008-2015 Crawford Currie http://c-dot.co.uk; 2011-2024 Foswiki Contributors"}%
 %META:FIELD{name="Description" title="Description" value="%25$SHORTDESCRIPTION%25"}%
 %META:FIELD{name="Home" title="Home" value="https://foswiki.org/Extensions/%TOPIC%"}%
 %META:FIELD{name="License" title="License" value="[[http://www.gnu.org/licenses/old-licenses/gpl-2.0.html][GPL2 (Gnu General Public License v2)]]"}%
