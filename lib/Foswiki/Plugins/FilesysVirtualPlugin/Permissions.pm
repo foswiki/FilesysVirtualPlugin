@@ -53,7 +53,7 @@ sub recache {
 # really not worth bothering about.
 sub _processWeb {
     my ( $this, $web, $topic ) = @_;
-    my $npr = 0;
+    my $npr    = 0;
     my @topics = $topic ? ($topic) : Foswiki::Func::getTopicList($web);
     foreach my $topic (@topics) {
         $this->_processTopic( $web, $topic );
@@ -81,9 +81,9 @@ sub _processTopic {
 
     my $path = '';
     if (   $topic eq $Foswiki::cfg{DefaultPrefsTopicName}
-        && $web   eq $Foswiki::cfg{SystemWebName}
+        && $web eq $Foswiki::cfg{SystemWebName}
         || $topic eq $Foswiki::cfg{SitePrefsTopicName}
-        && $web   eq Foswiki::Func::getMainWebname() )
+        && $web eq Foswiki::Func::getMainWebname() )
     {
         $path = '/';
     }
@@ -191,7 +191,7 @@ __END__
 Copyright (C) 2008-2010 WikiRing http://wikiring.com
 Copyright (C) 2004 WindRiver Inc.
 Copyright (C) 2008-2012 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2012-2024 Foswiki Contributors 
+Copyright (C) 2012-2026 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

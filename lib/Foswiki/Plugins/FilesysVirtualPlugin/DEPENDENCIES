@@ -6,4 +6,5 @@ File::Path,>=0,cpan,Standard perl module
 IO::File,>=0,cpan,Standard perl module
 IO::String,>=0,cpan,Required perl module
 Foswiki::Plugins::WysiwygPlugin,>=0,perl,Optional, required for .html view
+Foswiki::Plugins::TopicTitlePlugin,>1.00,perl,Optional
 JSON,>=0,cpan,Optional, required for the .json view

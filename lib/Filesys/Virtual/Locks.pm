@@ -110,7 +110,7 @@ sub _unlock {
           || die "Can't store locks '$@' '$!'";
     }
     flock( $this->{handle}, Fcntl::LOCK_UN ) || die "Failed to LOCK_UN: $!";
-    close( $this->{handle} ) || die "Failed to close: $!";
+    close( $this->{handle} )                 || die "Failed to close: $!";
     undef $this->{handle};
 }
 
@@ -160,7 +160,7 @@ sub removeLock {
                 }
 
                 # Clean up the hierarchy
-                while ($node
+                while ( $node
                     && !scalar( @{ $node->{locks} } )
                     && !scalar( keys %{ $node->{subnodes} } ) )
                 {
@@ -238,7 +238,7 @@ sub getLocks {
 
     # Check the tree above the node for deep locks
     my @path = split( '/', $path );
-    my $n = $#path;
+    my $n    = $#path;
     foreach my $pel (@path) {
         return @locks unless $node->{subnodes};
         my $subnode = $node->{subnodes}->{$pel};
@@ -302,8 +302,7 @@ sub setAuthToken {
     my $retval = 0;
     $this->_lock();
     eval {
-        if ( $data->{user} && $data->{path} && $data->{file} )
-        {
+        if ( $data->{user} && $data->{path} && $data->{file} ) {
             $data->{expires}              = scalar( time() ) + 7200;
             $this->{db}->{auth}->{$token} = $data;
             $retval                       = 1;
@@ -327,7 +326,7 @@ sub removeAuthToken {
 __END__
 
 Copyright (C) 2008-2015 WikiRing http://wikiring.com
-Copyright (C) 2015-2024 Foswiki Contributors 
+Copyright (C) 2015-2026 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

@@ -70,7 +70,7 @@ sub list_details {
     my ( $this, $path ) = @_;
 
     my $content = join( "\n", $this->SUPER::list_details($path) );
-    my $page = <<"HERE";
+    my $page    = <<"HERE";
 <!doctype html>
 <html lang="en">
   <head>
@@ -249,7 +249,7 @@ sub _attrsFile {
 __END__
 
 Copyright (C) 2009-2012 WikiRing http://wikiring.com
-Copyright (C) 2012-2024 Foswiki Contributors 
+Copyright (C) 2012-2026 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will

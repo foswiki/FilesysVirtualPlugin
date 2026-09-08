@@ -119,7 +119,7 @@ sub new {
         }
     }
 
-    $this->{views} = \@VIEWS;
+    $this->{views}        = \@VIEWS;
     $this->{extensionsRE} = join( '|', map { $_->extension() } @VIEWS );
 
     # cwd is the full path to the resource (ignore)
@@ -197,7 +197,7 @@ sub _initSession {
     return $this->{session} if defined $this->{session};
 
     # prepare request
-    my $request = Foswiki::Request->new();
+    my $request  = Foswiki::Request->new();
     my $pathInfo = $request->path_info() || $ENV{PATH_INFO} || '';
 
     if ($pathInfo) {
@@ -605,7 +605,22 @@ sub _dispatch {
         }
     );
 
-    return $this->$function( $info, @_ );
+    my $mustPop = 0;
+    if ( $info->{web} && $info->{topic} ) {
+        Foswiki::Func::pushTopicContext( $info->{web}, $info->{topic} );
+        $mustPop = 1;
+    }
+
+    if (wantarray) {
+        my @result = $this->$function( $info, @_ );
+        Foswiki::Func::popTopicContext() if $mustPop;
+        return @result;
+    }
+    else {
+        my $result = $this->$function( $info, @_ );
+        Foswiki::Func::popTopicContext() if $mustPop;
+        return $result;
+    }
 }
 
 # test if a topic has an attachments dir
@@ -736,10 +751,10 @@ sub _getMode {
         }
     }
     elsif ( $this->_haveAccess( 'VIEW', $web, $topic ) ) {
-        $mode |= oct(444);                # -r--r--r--
-                                          # No change without view
+        $mode |= oct(444);    # -r--r--r--
+                              # No change without view
         if ( $this->_haveAccess( 'CHANGE', $web, $topic ) ) {
-            $mode |= oct(222);            # --w--w--w-
+            $mode |= oct(222);    # --w--w--w-
         }
     }
 
@@ -847,6 +862,7 @@ sub modtime {
       localtime( $stat[9] );
     $yy += 1900;
     $mm++;
+
     return ( 1, "$yy$mm$dd$hr$min$sec" );
 }
 
@@ -991,8 +1007,7 @@ sub _W_displayName {
     my ( $this, $info ) = @_;
 
     if ( Foswiki::Func::webExists( $info->{web} ) ) {
-        return Foswiki::Func::getTopicTitle( $info->{web},
-            $Foswiki::cfg{HomeTopicName} );
+        return _getTopicTitle( $info->{web}, $Foswiki::cfg{HomeTopicName} );
     }
 }
 
@@ -1084,7 +1099,7 @@ sub _T_displayName {
     my ( $this, $info ) = @_;
 
     if ( Foswiki::Func::topicExists( $info->{web}, $info->{topic} ) ) {
-        return Foswiki::Func::getTopicTitle( $info->{web}, $info->{topic} );
+        return _getTopicTitle( $info->{web}, $info->{topic} );
     }
 }
 
@@ -1140,7 +1155,7 @@ sub _D_rename {
     my ( $this, $src_info, $destination ) = @_;
 
     return shift->_fail( POSIX::EPERM, @_ ) unless $this->{allowRenameTopic};
-    return 0 unless $this->_checkLock($src_info);
+    return 0                                unless $this->_checkLock($src_info);
 
     if ( !$this->_haveAccess( 'CHANGE', $src_info->{web}, $src_info->{topic} ) )
     {
@@ -1484,8 +1499,8 @@ sub _W_list {
     foreach my $sweb ( Foswiki::Func::getListOfWebs('user,public') ) {
         next if $sweb eq $info->{web};
         next unless $sweb =~ s/^$info->{web}\b.//;
-        next if $sweb =~ m#/#;
-        $sweb =~ s/\./\//g;
+        next if $sweb     =~ m#/#;
+        $sweb             =~ s/\./\//g;
         push( @list, $sweb );
     }
 
@@ -1519,7 +1534,7 @@ sub _D_list {
         # Probably TWiki. Have to violate Store encapsulation
         my $dir = "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";
         if ( opendir( D, $dir ) ) {
-            foreach my $e ( grep { !/,v$/ } readdir(D) ) {
+            foreach my $e ( grep { !/(,v|,pfv|.store)$/ } readdir(D) ) {
                 $e =~ /^(.*)$/;
                 push( @list, $1 );
             }
@@ -1702,11 +1717,10 @@ sub _T_stat {
 
     # SMELL: should META:TOPICINFO override what stat() says? It would
     # be very slow :-(
-    return ()
-      unless -e "$Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";
+    my $file = "$Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";
+    return () unless -e $file;
 
-    my @stat =
-      CORE::stat("$Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt");
+    my @stat = CORE::stat($file);
     $stat[2] = $this->_getMode( $info->{web}, $info->{topic} );
 
     return @stat;
@@ -1734,9 +1748,9 @@ sub _A_stat {
     # SMELL: using filesystem
     # SMELL: should META:FILEATTACHMENT override what stat() says? It would
     # be very slow :-(
-    my @stat = CORE::stat(
-        "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}/$info->{attachment}"
-    );
+    my $file =
+      "$Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}/$info->{attachment}";
+    my @stat = CORE::stat($file);
     $stat[2] = $this->_getMode( $info->{web}, $info->{topic} );
 
     return @stat;
@@ -1911,9 +1925,7 @@ sub _D_test {
     # All other ops, kick down to the filesystem
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
-    return
-      eval
-      "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";   ## no critic
+    return eval "-$type $Foswiki::cfg{PubDir}/$info->{web}/$info->{topic}";    ## no critic
 }
 
 sub _T_test {
@@ -1954,8 +1966,7 @@ sub _T_test {
     # SMELL: violating Store encapsulation
     # lpSbctugkTBzsMAC
     return
-      eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt"
-      ;    ## no critic
+      eval "-$type $Foswiki::cfg{DataDir}/$info->{web}/$info->{topic}.txt";    ## no critic
 }
 
 sub _F_test {
@@ -2137,8 +2148,8 @@ sub _A_closeHandle {
         #WORKAROUND to retain attachment comment
         my ( $web, $topic, $attachment ) = @{ $rec->{path} };
         my ( $meta, $text ) = Foswiki::Func::readTopic( $web, $topic );
-        my $args = $meta->get( 'FILEATTACHMENT', $attachment );
-        my $comment = $args->{comment} || '';
+        my $args          = $meta->get( 'FILEATTACHMENT', $attachment );
+        my $comment       = $args->{comment} || '';
         my $isHideChecked = 0;
         if ( defined( $args->{attr} ) and ( $args->{attr} =~ /h/o ) ) {
             $isHideChecked = 1;
@@ -2548,6 +2559,20 @@ sub get_locks {
     return @locks;
 }
 
+sub _getTopicTitle {
+    my ( $web, $topic ) = @_;
+
+    return Foswiki::Func::getTopicTitle( $web, $topic )
+      if $Foswiki::cfg{Plugins}{TopicTitlePlugin}{Enabled};
+
+    return $topic if $topic ne $Foswiki::cfg{HomeTopicName};
+
+    my $webTitle = $web;
+    $webTitle =~ s/^.*[\/\.]//;
+
+    return $webTitle;
+}
+
 1;
 
 __END__
@@ -2555,7 +2580,7 @@ __END__
 Copyright (C) 2008 KontextWork.de
 Copyright (C) 2011-2014 WikiRing http://wikiring.com
 Copyright (C) 2008-2014 Crawford Currie http://c-dot.co.uk
-Copyright (C) 2014-2024 Foswiki Contributors 
+Copyright (C) 2014-2026 Foswiki Contributors 
 
 This program is licensed to you under the terms of the GNU General
 Public License, version 2. It is distributed in the hope that it will
